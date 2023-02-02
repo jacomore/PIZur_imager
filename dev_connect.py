@@ -1,4 +1,5 @@
 from pipython import GCSDevice,pitools
+import warnings
 
 CONTROLLERNAME = 'C-663'
 STAGES = 'L-406.40SD00'  # connect stages to axes
@@ -12,6 +13,12 @@ def main():
         # return list of string with the found devices
         devices = pidevice.EnumerateUSB(mask=CONTROLLERNAME)
         
+        if not devices: 
+            with warnings.catch_warnings():
+                warnings.simplefilter('error',category=Warning)
+                warnings.warn("There are no connected devices! Please, connect at least one device.")
+
+
         # printout found devices
         for i, device in enumerate(devices):
             print('Number ---- Device')
