@@ -65,15 +65,16 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
     pitools.startup(pidevice, stages = STAGES, refmodes = REFMODES)
     
     # move towards REFMODE and wait until stage is ready on target
-    move_to_ref(pidevice,REFMODES)
+    #move_to_ref(pidevice,REFMODES)
     
     # return values of the minimum and maximum position of the travel range of axis
     rangemin = list(pidevice.qTMN().values())
     rangemax = list(pidevice.qTMX().values())
+    ranges = zip(rangemin,rangemax)
     
-    axis_edges = [rangemin[0],rangemax[0]]
-
-    scan_edge = target_within_range(scan_edges,axis_edges)
+    for min,max in ranges:
+        # check whether scan edges are within allowed range and sort scan_edges values
+        scan_edges = target_within_range(scan_edges,[min,max])
     
     
 
