@@ -44,7 +44,23 @@ def line_scan_partition(scan_edges,stepsize):
     Npoints = int((scan_edges[1]-scan_edges[0])/stepsize) + 1
     # define target positions through numpy linspace
     targets = np.linspace(scan_edges[0],scan_edges[1],Npoints,endpoint=  True)
+    # assert that the last target point is smaller than the positive scan edge
+    assert(targets[-1] <= scan_edges[1])
     return targets
+
+def line_scan_execution(pidevice,targets):
+    """ Perform the 1D line scan and returns the array 'positions' 
+        that contains the positions over which the stages has stopped."""
+    # empty vector to find the actual position of the stepper
+    positions = np.empty(len(targets),dtype = np.float16)
+    for index,pos in enumerate(targets): 
+        # move axis toward point of partition
+        pidevice.MOV(pidevice.axes,pos)
+        # wait until axes are on target
+        pitools.waitontarget(pidevice)
+        # store actual position onto positions
+        positions[index] = pidevice.qPOS(pidevice.axes)['1']
+    return positions
 
 CONTROLLERNAME = 'C-663'
 STAGES = 'L-406.40SD00'  # connect stages to axes
@@ -87,18 +103,6 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
     
     # define target positions through numpy linspace
     targets = line_scan_partition(scan_edges,stepsize)
-    # assert that the last target point is smaller than the positive scan edge
-    assert(targets[-1] <= scan_edges[1])
     
-    # empty vector to find the actual position of the stepper
-    positions = np.empty(len(targets),dtype = np.float16)
-    
-    for index,pos in enumerate(targets): 
-        # move axis toward point of partition
-        pidevice.MOV(pidevice.axes,pos)
-        # wait until axes are on target
-        pitools.waitontarget(pidevice)
-        # store actual position onto positions
-        positions[index] = pidevice.qPOS(pidevice.axes)['1']
-
-
+    # execute the line scan and return the sampled positions
+    positions = line_scan_execution(pidevice,targets)
