@@ -1,7 +1,7 @@
 from pipython import GCSDevice,pitools, GCS2Commands
 import numpy as np 
-import logging
-logging.basicConfig(level=logging.DEBUG)
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
 
 def move_to_ref(pidevice,REFMODES):
     """move the stage towards the reference point"""
@@ -40,14 +40,16 @@ def target_within_range(scan_edges,axis_edges):
         target_within_range(scan_edges,axis_edges)
     return scan_edges
 
-def line_scan_partition(scan_edges,stepsize):
+def line_scan_partition(scan_edges,stepsize,DIRECTION):
     """ return the partition over which the axis will move"""
     #number of points of the partition
     Npoints = int((scan_edges[1]-scan_edges[0])/stepsize) + 1
     # define target positions through numpy linspace
-    targets = np.linspace(scan_edges[0],scan_edges[1],Npoints,endpoint=  True)
+    if DIRECTION == "FRWD":
+        targets = np.linspace(scan_edges[0],scan_edges[1],Npoints,endpoint=  True)
+    elif DIRECTION == "BCWD":
+        targets = np.linspace(scan_edges[1],scan_edges[0],Npoints,endpoint=  True)
     # assert that the last target point is smaller than the positive scan edge
-    assert(targets[-1] <= scan_edges[1])
     return targets
 
 def line_scan_execution(pidevice,targets):
@@ -70,6 +72,9 @@ STAGES = 'L-406.40SD00'  # connect stages to axes
 REFMODES = 'FNL'
 scan_edges = [0,10]
 stepsize = 1
+#DIRECTION = "FRWD"
+DIRECTION = "BCWD"
+
 
 with GCSDevice(devname = CONTROLLERNAME) as pidevice: 
     # return list of string with the found devices
@@ -112,7 +117,7 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
         scan_edges = target_within_range(scan_edges,[min,max])
     
     # define target positions through numpy linspace
-    targets = line_scan_partition(scan_edges,stepsize)
+    targets = line_scan_partition(scan_edges,stepsize,DIRECTION)
     
     # execute the line scan and return the sampled positions
     positions = line_scan_execution(pidevice,targets)
