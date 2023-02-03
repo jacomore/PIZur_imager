@@ -1,16 +1,5 @@
 from pipython import GCSDevice,pitools, GCS2Commands
 
-# declaring class for new exception
-class InvalidPosInput(Exception):
-    "Raised when the input value is out of range"
-    pass
-
-# check input is correct 
-def pos_in_range(pos,rangemin,rangemax):
-    if pos <= rangemin or  pos >= rangemax:
-        raise InvalidPosInput
-
-
 def move_to_ref(pidevice,REFMODES):
     """move the stage towards the reference point"""
     if REFMODES == 'FNL':
@@ -20,12 +9,40 @@ def move_to_ref(pidevice,REFMODES):
     pitools.waitontarget(pidevice)
     print("Stage: {}".format(GCS2Commands.qCST(pidevice)['1']),"successfully referenced")
 
+def input_new_edges(old_edges, axis_edges):
+    """ 
+        IO_newinput is called when the input range for 1D scan is not comprised in the allowed range.
+        New input are thus required and the new_edges are returned
+    """ 
+    print(f"Invalid input: desired scan range [{old_edges[0]},{old_edges[1]}] is not within axis range: [{axis_edges[0]},{axis_edges[1]}]")
+    while True: 
+        try:
+            neg = float(input("Please, type a new value for the negative edge: "))
+            pos = float(input("Please, type a new value for the positive edge: "))
+            break
+        except ValueError:
+            print("That was no valid number!")
+    new_edges = [neg,pos]
+    return new_edges
+
+def target_within_range(scan_edges,axis_edges):
+    """
+    target_within_range sort values of scan_edges. Then, if scan_edges is not fully comprised in axis_edges, 
+    input_new_edges is invoked to get new edges. Eventually, target_within_range is called recursively to 
+    check that the new input satisfy the condition. 
+    """
+    scan_edges.sort()
+    if (scan_edges[0] < axis_edges[0] or scan_edges[1] > axis_edges[1]):
+        scan_edges = input_new_edges(scan_edges,axis_edges) 
+        target_within_range(scan_edges,axis_edges)
+    return scan_edges
 
 CONTROLLERNAME = 'C-663'
 STAGES = 'L-406.40SD00'  # connect stages to axes
 #REFMODES = 'FPL'
 REFMODES = 'FNL'
-DESTINATION = 1 # mm
+scan_edges = [945,100]
+
 
 with GCSDevice(devname = CONTROLLERNAME) as pidevice: 
     # return list of string with the found devices
@@ -53,18 +70,10 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
     # return values of the minimum and maximum position of the travel range of axis
     rangemin = list(pidevice.qTMN().values())
     rangemax = list(pidevice.qTMX().values())
+    
+    axis_edges = [rangemin[0],rangemax[0]]
 
-    # check entries for destination
-    try:
-        is_valid = pos_in_range(DESTINATION,rangemin[0],rangemax[0])
-    except ValueError:
-        print("That was no valid number!")
-    except TypeError:
-        print("That was no valid type!")
-    except InvalidPosInput:
-        print("Desired destination is out of range!")
-        
-
+    scan_edge = target_within_range(scan_edges,axis_edges)
     
     
 
