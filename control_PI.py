@@ -1,4 +1,5 @@
 from pipython import GCSDevice,pitools, GCS2Commands
+import numpy as np 
 
 def move_to_ref(pidevice,REFMODES):
     """move the stage towards the reference point"""
@@ -12,7 +13,7 @@ def move_to_ref(pidevice,REFMODES):
 def input_new_edges(old_edges, axis_edges):
     """ 
         IO_newinput is called when the input range for 1D scan is not comprised in the allowed range.
-        New input are thus required and the new_edges are returned
+        New inputs are thus required and the new_edges are returned
     """ 
     print(f"Invalid input: desired scan range [{old_edges[0]},{old_edges[1]}] is not within axis range: [{axis_edges[0]},{axis_edges[1]}]")
     while True: 
@@ -37,12 +38,20 @@ def target_within_range(scan_edges,axis_edges):
         target_within_range(scan_edges,axis_edges)
     return scan_edges
 
+def line_scan_partition(scan_edges,stepsize):
+    """ return the partition over which the axis will move"""
+    #number of points of the partition
+    Npoints = int((scan_edges[1]-scan_edges[0])/stepsize) + 1
+    # define target positions through numpy linspace
+    targets = np.linspace(scan_edges[0],scan_edges[1],Npoints,endpoint=  True)
+    return targets
+
 CONTROLLERNAME = 'C-663'
 STAGES = 'L-406.40SD00'  # connect stages to axes
 #REFMODES = 'FPL'
 REFMODES = 'FNL'
-scan_edges = [945,100]
-
+scan_edges = [0,10]
+stepsize = 1
 
 with GCSDevice(devname = CONTROLLERNAME) as pidevice: 
     # return list of string with the found devices
@@ -65,7 +74,7 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
     pitools.startup(pidevice, stages = STAGES, refmodes = REFMODES)
     
     # move towards REFMODE and wait until stage is ready on target
-    #move_to_ref(pidevice,REFMODES)
+    move_to_ref(pidevice,REFMODES)
     
     # return values of the minimum and maximum position of the travel range of axis
     rangemin = list(pidevice.qTMN().values())
@@ -76,6 +85,20 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
         # check whether scan edges are within allowed range and sort scan_edges values
         scan_edges = target_within_range(scan_edges,[min,max])
     
+    # define target positions through numpy linspace
+    targets = line_scan_partition(scan_edges,stepsize)
+    # assert that the last target point is smaller than the positive scan edge
+    assert(targets[-1] <= scan_edges[1])
     
+    # empty vector to find the actual position of the stepper
+    positions = np.empty(len(targets),dtype = np.float16)
+    
+    for index,pos in enumerate(targets): 
+        # move axis toward point of partition
+        pidevice.MOV(pidevice.axes,pos)
+        # wait until axes are on target
+        pitools.waitontarget(pidevice)
+        # store actual position onto positions
+        positions[index] = pidevice.qPOS(pidevice.axes)['1']
 
 
