@@ -1,5 +1,7 @@
 from pipython import GCSDevice,pitools, GCS2Commands
 import numpy as np 
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 def move_to_ref(pidevice,REFMODES):
     """move the stage towards the reference point"""
@@ -92,6 +94,14 @@ with GCSDevice(devname = CONTROLLERNAME) as pidevice:
     # move towards REFMODE and wait until stage is ready on target
     move_to_ref(pidevice,REFMODES)
     
+    # set trigger output to "In motion"
+    GCS2Commands.CTO(pidevice,1,2,1)
+    GCS2Commands.CTO(pidevice,1,3,6)
+    # enable trigger output with the configuration defined above
+    GCS2Commands.TRO(pidevice,1,True)
+   
+    print(pidevice.qSVO(pidevice.axes))
+
     # return values of the minimum and maximum position of the travel range of axis
     rangemin = list(pidevice.qTMN().values())
     rangemax = list(pidevice.qTMX().values())
