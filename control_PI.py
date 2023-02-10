@@ -1,7 +1,9 @@
 from pipython import GCSDevice,pitools, GCS2Commands
-from . import functions as fc
-#import logging
-#logging.basicConfig(level=logging.DEBUG)
+import zhinst.utils
+from PIZur_functions import *
+import time
+import numpy as np
+import matplotlib.pyplot as plt
 
 CONTROLLERNAME = 'C-663'
 STAGES = 'L-406.40SD00'  # connect stages to axes
