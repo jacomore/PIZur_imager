@@ -160,3 +160,25 @@ for signal_path in signal_paths:
     print("Subscribing to ", signal_path)
     daq_module.subscribe(signal_path)
     data[signal_path] = []
+
+# 3) 1D execution and data acquisition
+# ----------------------------------------------------------
+# define target positions through numpy linspace
+targets = scan1D_partition(scan_edges,stepsize,direction)
+# initialise an array with actual position that are reached by the controller
+positions = np.empty(len(targets),dtype = np.float16)
+# starts module execution
+daq_module.execute()
+
+while not daq_module.finished():
+    for index , position in enumerate(targets):  
+        # read the data as soon as the trigger is detected
+        raw_data = daq_module.read(True)
+        # move axis toward point of partition
+        pidevice.MOV(pidevice.axes,position)
+        # wait until axes are on target
+        pitools.waitontarget(pidevice)
+        # store actual position onto positions
+        positions[index] = pidevice.qPOS(pidevice.axes)['1']
+        print("Target:",targets[index],"Position:",positions[index])
+        process_raw_data(raw_data,index)
