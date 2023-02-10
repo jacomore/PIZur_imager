@@ -1,21 +1,44 @@
-
 from pipython import GCSDevice,pitools, GCS2Commands
 import numpy as np 
+from datetime import datetime
 
-def move_to_ref(pidevice,REFMODES):
-    """move the stage towards the reference point"""
-    if REFMODES == 'FNL':
+def move_stage_to_ref(pidevice,refmode):
+    """Moves the stage towards the selected reference point
+
+    Parameters
+    ----------
+    pidevice : GCSDevice object
+        instance of the PI device
+    refmode : str
+        string that defines the reference point (FNL = negative, FPL = positive)
+
+    Returns
+    -------
+    None 
+    """    
+    
+    if refmode == 'FNL':
         pidevice.FNL()
-    elif REFMODES == 'FPL':
+    elif refmode == 'FPL':
         pidevice.FPL()
     pitools.waitontarget(pidevice)
-    print("Stage: {}".format(GCS2Commands.qCST(pidevice)['1']),"successfully referenced")
+    print("Stage: {}".format(GCS2Commands.qCST(pidevice.axes)),"successfully referenced")
 
-def input_new_edges(old_edges, axis_edges):
+def input_new_scan_edges(old_edges, axis_edges):
+    """Asks for and returns new edges for the 1D scan
+    
+    Parameters
+    ----------
+    old_edges : list 
+        Two float elements with the input edges of the scan
+    axis_edges : list
+        Two float elements with the physical edges of the axes
+
+    Returns
+    -------
+    None 
     """ 
-        IO_newinput is called when the input range for 1D scan is not comprised in the allowed range.
-        New inputs are thus required and the new_edges are returned
-    """ 
+
     print(f"Invalid input: desired scan range [{old_edges[0]},{old_edges[1]}] is not within axis range: [{axis_edges[0]},{axis_edges[1]}]")
     while True: 
         try:
@@ -27,28 +50,55 @@ def input_new_edges(old_edges, axis_edges):
     new_edges = [neg,pos]
     return new_edges
 
-def target_within_range(scan_edges,axis_edges):
+def target_within_axis_edges(scan_edges,axis_edges):
     """
-    target_within_range sort values of scan_edges. Then, if scan_edges is not fully comprised in axis_edges, 
-    input_new_edges is invoked to get new edges. Eventually, target_within_range is called recursively to 
-    check that the new input satisfy the condition. 
-    """
+    Sorts values of scan_edges and, is they are not comprised in axis_edges,
+    invokes input_new_edges to get new edges
+
+
+    Parameters
+    ----------
+    scan_edges : list 
+        Two float elements with the input edges of the scan
+    axis_edges : list
+        Two float elements with the physical edges of the axes
+
+    Returns
+    -------
+    scan_edges : list
+        Two float elements with the input edges of the scan, either modified
+        or unchanged if they are not within the axis_edges.
+    """ 
+
     scan_edges.sort()
     if (scan_edges[0] < axis_edges[0] or scan_edges[1] > axis_edges[1]):
-        scan_edges = input_new_edges(scan_edges,axis_edges) 
-        target_within_range(scan_edges,axis_edges)
+        scan_edges = input_new_scan_edges(scan_edges,axis_edges) 
+        target_within_axis_edges(scan_edges,axis_edges)
     return scan_edges
 
-def line_scan_partition(scan_edges,stepsize,DIRECTION):
-    """ return the partition over which the axis will move"""
-    #number of points of the partition
+def scan1D_partition(scan_edges,stepsize,direction):
+    """ returns the partition of the target points for a 1D scan    
+    
+    Parameters
+    ----------
+    scan_edges : list 
+        Two float elements with the input edges of the scan
+    stepsize : list
+        A float with the size of the step of the 1D scan
+    direction: str
+        defines the direction of motion (FRWD = forward, BRWD = backward)
+
+    Returns
+    -------
+    targets : numpy.array
+        one-dimensional numpy array with the target points of the scan
+    """ 
+
     Npoints = int((scan_edges[1]-scan_edges[0])/stepsize) + 1
-    # define target positions through numpy linspace
-    if DIRECTION == "FRWD":
+    if direction == "FRWD":
         targets = np.linspace(scan_edges[0],scan_edges[1],Npoints,endpoint=  True)
-    elif DIRECTION == "BCWD":
+    elif direction == "BCWD":
         targets = np.linspace(scan_edges[1],scan_edges[0],Npoints,endpoint=  True)
-    # assert that the last target point is smaller than the positive scan edge
     return targets
 
 def line_scan_execution(pidevice,targets):
@@ -63,18 +113,27 @@ def line_scan_execution(pidevice,targets):
         pitools.waitontarget(pidevice)
         # store actual position onto positions
         positions[index] = pidevice.qPOS(pidevice.axes)['1']
+        print("Target:",targets[index],"Position:",positions[index])
     return positions
 
-def trigger_config(pidevice,axis,type):
+def configure_out_trig(pidevice,axis,type):
     """
-    set output trigger type for a given axis and enable it. 
+    Configures and sets the output trigger for a given axis
+
+    Parameters
     ----------
-    pidevice: input --> instance of PIDevice class
-    axis: integer --> axis whose trigger must be output
-    type: integer --> type of trigger; 6 ==  in Motion
-                                       1 = Line trigger...
+    pidevice: PIDevice object
+        instance of the PI device
+    axis: int
+        number that identifies the axis whose trigger must be output
+    type: int
+        type of trigger to be output (6 ==  in Motion, 1 = Line trigger)
+
+    Returns
+    -------
+    None
     """
-    # set trigger output to "In motion"
+
     GCS2Commands.CTO(pidevice,1,2,axis)
     GCS2Commands.CTO(pidevice,1,3,type)
     # enable trigger output with the configuration defined above
@@ -82,13 +141,20 @@ def trigger_config(pidevice,axis,type):
     return
 
 def axis_edges(pidevice):
-    """
-    evaluate and return the allowed range for the given axis. In particular, 
+    """ evaluate and return the allowed range for the given axis. In particular, 
     it calculates the edges of axis. 
-    ----------------
-    pidevice: input --> instance of PIDevice class
-    ranges : output --> zip object that contains th edges of the single axis as a tuple
+
+    Parameters
+    ----------
+    pidevice: PIDevice object
+        instance of the PI device
+
+
+    Returns
+    -------
+    ranges : zip object --> zip object that contains th edges of the single axis as a tuple
     """
+    
     rangemin = list(pidevice.qTMN().values())
     rangemax = list(pidevice.qTMX().values())
     ranges = zip(rangemin,rangemax)
