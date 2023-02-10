@@ -41,39 +41,36 @@ imp50 = 0               # set 50 Ohm impedance at the entrace; 1 = activated, 0 
 harmonic = 1            # set multiple of the oscillator frequency for demulating
 # ---------------------------------------------------------
 
-with GCSDevice(devname = controller_name) as pidevice: 
-    # return list of string with the found devices
-    devices = pidevice.EnumerateUSB(mask=controller_name)
-    # check that devices is not empty        
-    if not devices: 
-       raise Exception("There are no connected devices! Please, connect at least one device.")
+# 1) Setup the controller: switch servo-on and reference
+# ----------------------------------------------------------
+pidevice = GCSDevice(devname = controller_name)
+devices = pidevice.EnumerateUSB(mask=controller_name)
+# check that at least one device is connected        
+if not devices: 
+    raise Exception("There are no connected devices! Please, connect at least one device.")
+# print out connected devices
+for i, device in enumerate(devices):
+    print('Number ---- Device')
+    print('{}      ----  {}'.format(i,device))
+# I/O for device selection
+item = int(input('Input the index of the device to connect:'))
+pidevice.ConnectUSB(devices[item])
+print('connected: {}'.format(pidevice.qIDN().strip()))    
+# initialise the controller and the stages
+pitools.startup(pidevice, stages = stage, refmodes = refmode)
+# move towards refmode and wait until stage is ready on target
+move_stage_to_ref(pidevice,refmode)
+# set trigger output to "In motion"
+configure_out_trig(pidevice,axis = 1,type = 6)
+# return values of the minimum and maximum position of the travel range of axis
+ranges = axis_edges(pidevice)
 
-    # printout found devices
-    for i, device in enumerate(devices):
-        print('Number ---- Device')
-        print('{}      ----  {}'.format(i,device))
+for min_val,max_val in ranges:
+    # check whether scan edges are within allowed range and sort scan_edges values
+    scan_edges = target_within_axis_edges(scan_edges,[min_val,max_val])
+# ----------------------------------------------------------
+# define target positions through numpy linspace
+targets = scan1D_partition(scan_edges,stepsize,direction)
 
-    # read the selected device
-    item = int(input('Input the index of the device to connect:'))
-    pidevice.ConnectUSB(devices[item])
-    print('connected: {}'.format(pidevice.qIDN().strip()))
-
-    # initialise the controller and the stage
-    pitools.startup(pidevice, stage = stage, refmode = refmode)
-    # move towards REFMODE and wait until stage is ready on target
-    move_stage_to_ref(pidevice,refmode)
-    # set trigger output to "In motion"
-    configure_out_trig(pidevice,axis = 1,type = 6)
-    
-    # return values of the minimum and maximum position of the travel range of axis
-    ranges = axis_edges(pidevice)
-    
-    for min,max in ranges:
-        # check whether scan edges are within allowed range and sort scan_edges values
-        scan_edges = target_within_axis_edges(scan_edges,[min,max])
-    
-    # define target positions through numpy linspace
-    targets = scan1D_partition(scan_edges,stepsize,direction)
-    
-    # execute the line scan and return the sampled positions
-    positions = line_scan_execution(pidevice,targets)
+# execute the line scan and return the sampled positions
+positions = line_scan_execution(pidevice,targets)
