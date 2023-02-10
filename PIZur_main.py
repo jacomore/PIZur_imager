@@ -69,8 +69,3 @@ for min_val,max_val in ranges:
     # check whether scan edges are within allowed range and sort scan_edges values
     scan_edges = target_within_axis_edges(scan_edges,[min_val,max_val])
 # ----------------------------------------------------------
-# define target positions through numpy linspace
-targets = scan1D_partition(scan_edges,stepsize,direction)
-
-# execute the line scan and return the sampled positions
-positions = line_scan_execution(pidevice,targets)
