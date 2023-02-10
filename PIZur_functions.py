@@ -127,21 +127,6 @@ def scan1D_partition(scan_edges,stepsize,direction):
         targets = np.linspace(scan_edges[1],scan_edges[0],Npoints,endpoint=  True)
     return targets
 
-def line_scan_execution(pidevice,targets):
-    """ Perform the 1D line scan and returns the array 'positions' 
-        that contains the positions over which the stages has stopped."""
-    # empty vector to find the actual position of the stepper
-    positions = np.empty(len(targets),dtype = np.float16)
-    for index,pos in enumerate(targets): 
-        # move axis toward point of partition
-        pidevice.MOV(pidevice.axes,pos)
-        # wait until axes are on target
-        pitools.waitontarget(pidevice)
-        # store actual position onto positions
-        positions[index] = pidevice.qPOS(pidevice.axes)['1']
-        print("Target:",targets[index],"Position:",positions[index])
-    return positions
-
 def configure_out_trig(pidevice,axis,type):
     """
     Configures and sets the output trigger for a given axis
