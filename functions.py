@@ -1,6 +1,6 @@
 from pipython import GCSDevice,pitools, GCS2Commands
-import numpy as np 
-from datetime import datetime
+import zhinst.utils
+import numpy as np
 
 def move_stage_to_ref(pidevice,refmode):
     """Moves the stage towards the selected reference point
