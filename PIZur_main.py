@@ -78,7 +78,7 @@ daq, device, props = zhinst.utils.create_api_session(device_id,
                                                     server_port=server_port)
 
 # setting debugging level (the higher the value, the lower the verbosity)
-daq.setDebugLevel(3)
+daq.setDebugLevel(6)
 # create an initial condition in which everything is deactivated (tabula rasa)
 zhinst.utils.disable_everything(daq, device)
 # calculate time constant 
@@ -121,12 +121,14 @@ triggernode = triggerpath
 daq_module.set("triggernode", triggernode)
 # trigger on the negative edge
 daq_module.set("edge", 2)
+
+trigger_duration = 0.05
+daq_module.set("duration",trigger_duration)
 # no trigger delay
 trigger_delay = 0
 daq_module.set("delay", trigger_delay)
 # Do not return overlapped trigger events -->  set an hold-off time of 50 ms
-hold_off_time = 0.05
-daq_module.set("holdoff/time", hold_off_time)
+daq_module.set("holdoff/time", trigger_duration)
 daq_module.set("holdoff/count", 0)
 # setting grid mode "exact (on grid)"
 daq_module.set("grid/mode", 4) 
@@ -138,23 +140,26 @@ num_cols = int(np.ceil(demod_rate* burst_duration))
 # set the number of cols in the grid
 daq_module.set("grid/cols", num_cols)
 # set the number of rows in the grid
-num_rows = int((np.floor(scan_edges[1]-scan_edges[0])/stepsize + 1))
+num_rows = int((scan_edges[1]-scan_edges[0])/stepsize - 1)  
 daq_module.set("grid/rows", num_rows)
+print(num_rows)
 # direction of data saving
-daq_module.set('save/directory', 'C:\\Users\\ophadmin\\Desktop\\PIZur_imager\\Test1')
+daq_module.set('save/directory', 'C:\\Users\\ophadmin\\Desktop\\PIZur_imager\\PIZur_imager\\Test')
 # set endless mode to false
 daq_module.set("endless",0)
 # saving filename
 filename = "DAQ_1Dscan_test1"
 daq_module.set("save/fileformat", "csv")
 daq_module.set("save/filename", filename)
-# 'save/saveonread' - save the data each time read() is called.
+## 'save/saveonread' - save the data each time read() is called.
 daq_module.set("save/saveonread", True)
 # subscribe to signals: average of module and phase of the demodulated signal
 demod_path = f"/{device_id}/demods/0/sample"
 signal_paths = []
 signal_paths.append(demod_path + ".R.avg") 
 signal_paths.append(demod_path + ".Theta.avg")  
+signal_paths.append(triggerpath)  
+
 data = {}
 for signal_path in signal_paths:
     print("Subscribing to ", signal_path)
@@ -170,10 +175,11 @@ positions = np.empty(len(targets),dtype = np.float16)
 # starts module execution
 daq_module.execute()
 
-while not daq_module.finished():
-    for index , position in enumerate(targets):  
-        # read the data as soon as the trigger is detected
+for index , position in enumerate(targets):  
+    if not daq_module.finished():
         raw_data = daq_module.read(True)
+        print(daq_module.progress())
+        # read the data as soon as the trigger is detected
         # move axis toward point of partition
         pidevice.MOV(pidevice.axes,position)
         # wait until axes are on target
@@ -181,4 +187,12 @@ while not daq_module.finished():
         # store actual position onto positions
         positions[index] = pidevice.qPOS(pidevice.axes)['1']
         print("Target:",targets[index],"Position:",positions[index])
-        process_raw_data(raw_data,index)
+        data = process_raw_data(signal_paths, raw_data,index)
+    else: 
+        raw_data = daq_module.read(True)
+        print(raw_data)
+        print("Acquisition finished!")
+ 
+
+
+    

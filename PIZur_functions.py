@@ -20,7 +20,7 @@ def process_raw_data(signal_paths,raw_data,index):
     _ : float
         value that contains the average over the columns
     """
-
+    print(raw_data)
     for i, signal_path in enumerate(signal_paths):
         for signal_burst in raw_data.get(signal_path.lower(),[]):
             # skip the first two steps (required for calibration)
@@ -48,7 +48,7 @@ def move_stage_to_ref(pidevice,refmode):
     elif refmode == 'FPL':
         pidevice.FPL()
     pitools.waitontarget(pidevice)
-    print("Stage: {}".format(GCS2Commands.qCST(pidevice.axes)),"successfully referenced")
+    print("Stage: {}".format(GCS2Commands.qCST(pidevice)['1']),"successfully referenced")
 
 def input_new_scan_edges(old_edges, axis_edges):
     """Asks for and returns new edges for the 1D scan
