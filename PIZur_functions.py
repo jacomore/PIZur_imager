@@ -168,5 +168,4 @@ def axis_edges(pidevice):
     
     rangemin = list(pidevice.qTMN().values())
     rangemax = list(pidevice.qTMX().values())
-    ranges = zip(rangemin,rangemax)
-    return ranges
+    return rangemin[0],rangemax[0]

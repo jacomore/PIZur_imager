@@ -60,11 +60,8 @@ move_stage_to_ref(pidevice,controller["refmode"])
 # set trigger output to "In motion"
 configure_out_trig(pidevice,axis = 1,type = 6)
 # return values of the minimum and maximum position of the travel range of axis
-ranges = axis_edges(pidevice)
-
-for min_val,max_val in ranges:
-    # check whether scan edges are within allowed range and sort scan_edges values
-    scan_edges = target_within_axis_edges(scan_edges,[min_val,max_val])
+neg_edge,pos_edge = axis_edges(pidevice)
+scan_edges = target_within_axis_edges(scan_edges,[neg_edge,pos_edge])
 # ----------------------------------------------------------
 
 # 2) Setup the zhinst and the data acquisition tab
