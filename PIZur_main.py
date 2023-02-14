@@ -18,11 +18,14 @@ stepsize = 0.1
 
 # ---------------------------------------------------------
 # ZHINST PARAMETERS:
-device_id = 'dev4910'
+device_pars = { 'device_id':'dev4910',
+                'server_host':'169.254.196.174',
+                'apilevel' : 6,
+                'server_port' : 8004
+                }
+
 num_grids = 1
-server_host = "169.254.196.174"
-apilevel_example = 6  
-server_port =8004
+
 
 ### Demodulator:
 in_channel = 0          # Input channel V1
@@ -66,10 +69,10 @@ scan_edges = target_within_axis_edges(scan_edges,[neg_edge,pos_edge])
 
 # 2) Setup the zhinst and the data acquisition tab
 # ----------------------------------------------------------
-daq, device, props = zhinst.utils.create_api_session(device_id,
-                                                    apilevel_example, 
-                                                    server_host=server_host,
-                                                    server_port=server_port)
+daq, device, props = zhinst.utils.create_api_session(device_pars["device_id"],
+                                                    device_pars["apilevel"], 
+                                                    device_pars["server_host"],
+                                                    device_pars["server_port"])
 
 # setting debugging level (the higher the value, the lower the verbosity)
 daq.setDebugLevel(6)
@@ -78,18 +81,18 @@ zhinst.utils.disable_everything(daq, device)
 # calculate time constant 
 timeconstant = zhinst.utils.bw2tc(demod_bandwidth, demod_order) 
 exp_setting = [
-    ["/%s/sigins/%d/ac" % (device_id, in_channel), ac_filter],                                            # AC filter
-    ["/%s/sigins/%d/imp50" % (device_id, in_channel), imp50],                                         # match 50 Ohm impedance
+    ["/%s/sigins/%d/ac" % (device_pars["device_id"], in_channel), ac_filter],                                            # AC filter
+    ["/%s/sigins/%d/imp50" % (device_pars["device_id"], in_channel), imp50],                                         # match 50 Ohm impedance
    # ["/%s/sigins/%d/autorange" % (device_id, in_channel),1], # range of the input voltage (sensitivity)
-    ["/%s/sigins/%d/range" % (device_id, in_channel),amplitude], # range of the input voltage (sensitivity)
-    ["/%s/demods/%d/enable" % (device_id, trigger_demod_index), 1],                               # switch on demodulator (?)
-    ["/%s/demods/%d/rate" % (device_id, trigger_demod_index), demod_rate],                             
+    ["/%s/sigins/%d/range" % (device_pars["device_id"], in_channel),amplitude], # range of the input voltage (sensitivity)
+    ["/%s/demods/%d/enable" % (device_pars["device_id"], trigger_demod_index), 1],                               # switch on demodulator (?)
+    ["/%s/demods/%d/rate" % (device_pars["device_id"], trigger_demod_index), demod_rate],                             
     #["/%s/demods/%d/adcselect" % (device_id, trigger_demod_index), in_channel],                   # selector of the signal to be converted into digital 
-    ["/%s/demods/%d/order" % (device_id, trigger_demod_index), demod_order],                      
-    ["/%s/demods/%d/timeconstant" % (device_id, trigger_demod_index), timeconstant],
-    ["/%s/demods/%d/oscselect" % (device_id, trigger_demod_index), osc_index],                    
-    ["/%s/demods/%d/harmonic" % (device_id, trigger_demod_index), harmonic],
-    ["/%s/oscs/%d/freq" % (device_id, osc_index), frequency],
+    ["/%s/demods/%d/order" % (device_pars["device_id"], trigger_demod_index), demod_order],                      
+    ["/%s/demods/%d/timeconstant" % (device_pars["device_id"], trigger_demod_index), timeconstant],
+    ["/%s/demods/%d/oscselect" % (device_pars["device_id"], trigger_demod_index), osc_index],                    
+    ["/%s/demods/%d/harmonic" % (device_pars["device_id"], trigger_demod_index), harmonic],
+    ["/%s/oscs/%d/freq" % (device_pars["device_id"], osc_index), frequency],
               ]
 # upload above defined settings
 daq.set(exp_setting)
@@ -106,7 +109,7 @@ daq_module = daq.dataAcquisitionModule()
 daq_module.set('historylength', 100000) # length of the history acquisition
 
 # Set the device that will be used for the trigger
-daq_module.set("device", device_id)
+daq_module.set("device", device_pars["device_id"])
 # trigger mode 6 --> hardware trigger
 daq_module.set("type", 6)
 # set the triggernode to the Digital Trigger Port 1 in the back panel
@@ -148,7 +151,7 @@ daq_module.set("save/filename", filename)
 ## 'save/saveonread' - save the data each time read() is called.
 daq_module.set("save/saveonread", True)
 # subscribe to signals: average of module and phase of the demodulated signal
-demod_path = f"/{device_id}/demods/0/sample"
+demod_path = f"/{device_pars['device_id']}/demods/0/sample"
 signal_paths = []
 signal_paths.append(demod_path + ".R.avg") 
 signal_paths.append(demod_path + ".Theta.avg")  
