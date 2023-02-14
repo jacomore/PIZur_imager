@@ -6,13 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------
-### PI PARAMETERS:
-controller_name = 'C-663'
-stage = 'L-406.40SD00'  # connect stage to axes
-#refmode = 'FPL'
-refmode = 'FNL'
-#direction = "FRWD"
-direction = "BCWD"
+controller = {'ID':'C-663',
+              'stage_ID': 'L-406.40SD00',
+              'refmode': 'FPL',
+              'motion_direction':'FRWD'}
 
 ### Scan:
 scan_edges = [0,11]
@@ -43,8 +40,8 @@ harmonic = 1            # set multiple of the oscillator frequency for demulatin
 
 # 1) Setup the controller: switch servo-on and reference
 # ----------------------------------------------------------
-pidevice = GCSDevice(devname = controller_name)
-devices = pidevice.EnumerateUSB(mask=controller_name)
+pidevice = GCSDevice(devname = controller['ID'])
+devices = pidevice.EnumerateUSB(mask=controller['ID'])
 # check that at least one device is connected        
 if not devices: 
     raise Exception("There are no connected devices! Please, connect at least one device.")
@@ -57,9 +54,9 @@ item = int(input('Input the index of the device to connect:'))
 pidevice.ConnectUSB(devices[item])
 print('connected: {}'.format(pidevice.qIDN().strip()))    
 # initialise the controller and the stages
-pitools.startup(pidevice, stages = stage, refmodes = refmode)
+pitools.startup(pidevice, stages = controller["stage_ID"], refmodes = controller["refmode"])
 # move towards refmode and wait until stage is ready on target
-move_stage_to_ref(pidevice,refmode)
+move_stage_to_ref(pidevice,controller["refmode"])
 # set trigger output to "In motion"
 configure_out_trig(pidevice,axis = 1,type = 6)
 # return values of the minimum and maximum position of the travel range of axis
@@ -169,7 +166,7 @@ for signal_path in signal_paths:
 # 3) 1D execution and data acquisition
 # ----------------------------------------------------------
 # define target positions through numpy linspace
-targets = scan1D_partition(scan_edges,stepsize,direction)
+targets = scan1D_partition(scan_edges,stepsize,controller["motion_direction"])
 # initialise an array with actual position that are reached by the controller
 positions = np.empty(len(targets),dtype = np.float16)
 # starts module execution
