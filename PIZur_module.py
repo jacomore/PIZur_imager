@@ -50,7 +50,23 @@ class Stepper:
         neg_edge = list(self.pidevice.qTMN().values())
         pos_edge = list(self.pidevice.qTMX().values())
         return neg_edge[0],pos_edge[0]
-    
+
+    def configure_out_trig(self,type):
+        """
+        Configures and sets the output trigger for a given axis
+
+        Parameters
+        type: int
+            type of trigger to be output (6 ==  in Motion, 1 = Line trigger)
+
+        Returns
+        -------
+        None
+        """
+        self.pidevice.CTO(1,2,1)
+        self.pidevice.CTO(1,3,type)
+        # enable trigger output with the configuration defined above
+        self.pidevice.TRO(1,True)
         
 class StepperChain():
     """Handle the connection with two pidevices, making use of the Stepper class 
@@ -88,11 +104,16 @@ class StepperChain():
         """
         self.master.move_stage_to_ref(refmodes[0])
         self.servo.move_stage_to_ref(refmodes[1])
-        
-        
-        
     
-
-
+    def configure_both_trig(self,types):
+        """Configure the output trigger modes of the two devices
         
+        Parameters
+        --------
+        types: list
+            list of int defining the types of trigger to be output (6 ==  in Motion, 1 = Line trigger)
+            first element is associated with master, second with servo      
+        """    
+        self.master.configure_out_trig(types[0])
+        self.servo.configure_out_trig(types[1])
         
