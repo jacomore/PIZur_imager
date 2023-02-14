@@ -145,10 +145,10 @@ def configure_out_trig(pidevice,axis,type):
     None
     """
 
-    GCS2Commands.CTO(pidevice,1,2,axis)
-    GCS2Commands.CTO(pidevice,1,3,type)
+    pidevice.CTO(1,2,axis)
+    pidevice.CTO(1,3,type)
     # enable trigger output with the configuration defined above
-    GCS2Commands.TRO(pidevice,1,True)
+    pidevice.TRO(1,True)
     return
 
 def axis_edges(pidevice):
