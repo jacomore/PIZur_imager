@@ -29,8 +29,8 @@ class zhinst_lockin:
             self.daq.set(setting)
         
     def demod_signal_settings(self,trigger_demod_index,demod_pars):
-        """upload on the lock-in all the setings for the demodulators"""
-        for feature,value in demod_pars():
+        """upload on the lock-in all the settings for the demodulators"""
+        for feature,value in demod_pars.items():
             setting = "/%s/demods/%d/%s"(self.device_id,trigger_demod_index,feature),value
             self.daq.set(setting)
             
@@ -47,9 +47,5 @@ class zhinst_lockin:
     def oscillator_setting(self,osc_index,osc_freq):
         """ upload on the lock-in the setting for the oscillator channel"""
         self.daq.set("/%s/oscs/%d/freq" % (self.device_id, osc_index), osc_freq)
-        
-            
-        
-    
-    
+
             
