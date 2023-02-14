@@ -1,4 +1,5 @@
 import zhinst.utils
+import time
 
 class zhinst_lockin:
     """Setup output signals, oscillators, demodulators, and data acquisition tab of the 
@@ -33,8 +34,15 @@ class zhinst_lockin:
             setting = "/%s/demods/%d/%s"(self.device_id,trigger_demod_index,feature),value
             self.daq.set(setting)
             
-        setting = "/%s/demods/%d/%s"(self.device_id,trigger_demod_index,"timeconstant"),self.timeconstant
-        self.daq.setDouble(setting)
+        set_time = "/%s/demods/%d/%s"(self.device_id,trigger_demod_index,"timeconstant"),self.timeconstant
+        self.daq.setDouble(set_time)
+        # Wait for the demodulator filter to settle.
+        timeconstant_set = self.aq.getDouble(
+            "/%s/demods/%d/timeconstant" % (self.device, trigger_demod_index)
+                                        )
+        time.sleep(10 * timeconstant_set)
+        # perform a global synchronisation between the device and the data server")
+        self.daq.sync()
     
     def oscillator_setting(self,osc_index,osc_freq):
         """ upload on the lock-in the setting for the oscillator channel"""
