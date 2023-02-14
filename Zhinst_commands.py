@@ -49,3 +49,16 @@ class zhinst_lockin:
         self.daq.set("/%s/oscs/%d/freq" % (self.device_id, osc_index), osc_freq)
 
             
+    def data_acquisition_setting(self,data_acquisition_pars):
+        """upload on the lock-in all the settings for data acquisition"""
+        self.daq_module = self.daq.dataAcquisitionModule()
+        for feature,value in data_acquisition_pars.items():
+            self.daq_module(feature,value)
+    
+    def subscribe_to_signals(self,signal_paths):
+        self.data = {}
+        for signal_path in signal_paths:
+            print("Subscribing to ",signal_path)
+            self.daq_module.subscribe(signal_path)
+            self.data[signal_path] = []
+    
