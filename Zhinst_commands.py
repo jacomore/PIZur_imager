@@ -15,26 +15,23 @@ class zhinst_lockin:
         self.daq.setDebugLevel(6)
         zhinst.utils.disable_everything(self.daq,self.device)
         
-    def evaluate_timeconstant(self,demod_pars):
-        """evaluate the time constant to set in the lock-in based on the 
-           input value of demodulator bandwidth and order
-        """
-        self.timeconstant =  zhinst.utils.bw2tc(demod_pars["demod_bandwidth"], demod_pars["demod_order"])
-
-           
+          
     def input_signal_settings(self,in_channel,input_sig_pars):
         """upload on the lock-in all the settings for the input signal acquisition"""
         for feature,value in input_sig_pars.items():
+
             setting = "/%s/sigins/%d/%s"% (self.device_id,in_channel,feature),value
             self.daq.set(setting)
         
     def demod_signal_settings(self,trigger_demod_index,demod_pars):
         """upload on the lock-in all the settings for the demodulators"""
         for feature,value in demod_pars.items():
-            setting = "/%s/demods/%d/%s"(self.device_id,trigger_demod_index,feature),value
-            self.daq.set(setting)
-            
-        set_time = "/%s/demods/%d/%s"(self.device_id,trigger_demod_index,"timeconstant"),self.timeconstant
+            if feature != 'bandwidth':
+                setting = "/%s/demods/%d/%s" % (self.device_id,trigger_demod_index,feature),value
+                self.daq.set(setting)
+        
+        timeconstant = zhinst.utils.bw2tc(demod_pars["bandwidth"], demod_pars["order"])
+        set_time = "/%s/demods/%d/%s" % (self.device_id,trigger_demod_index,"timeconstant"),timeconstant
         self.daq.setDouble(set_time)
         # Wait for the demodulator filter to settle.
         timeconstant_set = self.aq.getDouble(
