@@ -28,6 +28,7 @@ class Stepper:
         # I/O for device selection
         item = int(input('Input the index of the device to connect:'))
         self.pidevice.ConnectUSB(devices[item])
+        pitools.startup(self.pidevice, self.axis_ID)
         
     def move_stage_to_ref(self,refmode):
         """Move the selected controller towards reference position
