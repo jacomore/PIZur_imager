@@ -78,8 +78,8 @@ class StepperChain():
         self.controller_ID = controller_ID      
         self.axis_ID = axis_ID
         # create two instances of the Stepper class (one for each controller)
-        self.master = Stepper()
-        self.servo = Stepper()
+        self.master = Stepper(controller_ID,axis_ID)
+        self.servo = Stepper(controller_ID,axis_ID)
     
     def connect_daisy(self,dev_indeces):
         """Connect master and servo to form a daisy chain 
@@ -93,8 +93,11 @@ class StepperChain():
         self.master.pidevice.OpenUSBDaisyChain(description = devices[0])
         daisychainid = self.master.pidevice.dcid
         self.master.pidevice.ConnectDaisyChainDevice(dev_indeces[0],daisychainid)
-        self.servo.pidevice.COnnectDaisyChainDevice(dev_indeces[1],daisychainid)
-        
+        pitools.startup(self.master.pidevice,self.master.axis_ID)
+        self.servo.pidevice.ConnectDaisyChainDevice(dev_indeces[1],daisychainid)
+        pitools.startup(self.servo.pidevice,self.master.axis_ID)
+
+
     def reference_both_stages(self,refmodes):
         """Connect master and servo to form a daisy chain 
         
