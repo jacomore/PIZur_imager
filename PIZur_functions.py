@@ -28,28 +28,6 @@ def process_raw_data(signal_paths,raw_data,index):
                 value = signal_burst["value"][index-2,:]
                 return np.mean(value)
 
-def move_stage_to_ref(pidevice,refmode):
-    """Moves the stage towards the selected reference point
-
-    Parameters
-    ----------
-    pidevice : GCSDevice object
-        instance of the PI device
-    refmode : str
-        string that defines the reference point (FNL = negative, FPL = positive)
-
-    Returns
-    -------
-    None 
-    """    
-    
-    if refmode == 'FNL':
-        pidevice.FNL()
-    elif refmode == 'FPL':
-        pidevice.FPL()
-    pitools.waitontarget(pidevice)
-    print("Stage: {}".format(GCS2Commands.qCST(pidevice)['1']),"successfully referenced")
-
 def input_new_scan_edges(old_edges, axis_edges):
     """Asks for and returns new edges for the 1D scan
     
@@ -127,45 +105,3 @@ def scan1D_partition(scan_edges,stepsize,direction):
         targets = np.linspace(scan_edges[1],scan_edges[0],Npoints,endpoint=  True)
     return targets
 
-def configure_out_trig(pidevice,axis,type):
-    """
-    Configures and sets the output trigger for a given axis
-
-    Parameters
-    ----------
-    pidevice: PIDevice object
-        instance of the PI device
-    axis: int
-        number that identifies the axis whose trigger must be output
-    type: int
-        type of trigger to be output (6 ==  in Motion, 1 = Line trigger)
-
-    Returns
-    -------
-    None
-    """
-
-    pidevice.CTO(1,2,axis)
-    pidevice.CTO(1,3,type)
-    # enable trigger output with the configuration defined above
-    pidevice.TRO(1,True)
-    return
-
-def axis_edges(pidevice):
-    """ evaluate and return the allowed range for the given axis. In particular, 
-    it calculates the edges of axis. 
-
-    Parameters
-    ----------
-    pidevice: PIDevice object
-        instance of the PI device
-
-
-    Returns
-    -------
-    ranges : zip object --> zip object that contains th edges of the single axis as a tuple
-    """
-    
-    rangemin = list(pidevice.qTMN().values())
-    rangemax = list(pidevice.qTMX().values())
-    return rangemin[0],rangemax[0]

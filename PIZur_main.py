@@ -4,7 +4,7 @@ import numpy as np
 import json
 import os
 
-# input DATA
+# input parameters
 f = open('input_dicts.json')
 PIZur_inputs = json.load(f)
 pi = PIZur_inputs["pi"]
