@@ -20,7 +20,6 @@ def process_raw_data(signal_paths,raw_data,index):
     _ : float
         value that contains the average over the columns
     """
-    print(raw_data)
     for i, signal_path in enumerate(signal_paths):
         for signal_burst in raw_data.get(signal_path.lower(),[]):
             # skip the first two steps (required for calibration)
@@ -80,7 +79,7 @@ def target_within_axis_edges(scan_edges,axis_edges):
         target_within_axis_edges(scan_edges,axis_edges)
     return scan_edges
 
-def scan1D_partition(scan_edges,stepsize,direction):
+def onedim_partition(scan_edges,stepsize,direction):
     """ returns the partition of the target points for a 1D scan    
     
     Parameters
