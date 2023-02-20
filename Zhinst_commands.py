@@ -15,17 +15,21 @@ class zhinst_lockin:
         self.daq.setDebugLevel(6)
         zhinst.utils.disable_everything(self.daq,self.device)
         
-    def input_signal_settings(self,in_channel,input_sig_pars):
+    def input_signal_settings(self,input_sig_pars):
         """upload on the lock-in all the settings for the input signal acquisition"""
+        in_channel = input_sig_pars["input_channel"]
         for feature,value in input_sig_pars.items(): 
-            self.daq.set("/%s/sigins/%d/%s"% (self.device_id,in_channel,feature),value)
+            if feature != "input_channel":
+                self.daq.set("/%s/sigins/%d/%s"% (self.device_id,in_channel,feature),value)
         
-    def demod_signal_settings(self,trigger_demod_index,demod_pars):
+    def demod_signal_settings(self,demod_pars):
+        trigger_demod_index = demod_pars["trigger_demod_index"]
         """upload on the lock-in all the settings for the demodulators"""
         for feature,value in demod_pars.items():
-            if feature != 'bandwidth':
+            if feature not in ['bandwidth','trigger_demod_index'] :
+                print(feature)
                 self.daq.set("/%s/demods/%d/%s" % (self.device_id,trigger_demod_index,feature),value)
-        
+
         timeconstant = zhinst.utils.bw2tc(demod_pars["bandwidth"], demod_pars["order"])
         self.daq.setDouble("/%s/demods/%d/%s" % (self.device_id,trigger_demod_index,"timeconstant"),timeconstant)
         # Wait for the demodulator filter to settle.
@@ -36,10 +40,9 @@ class zhinst_lockin:
         # perform a global synchronisation between the device and the data server")
         self.daq.sync()
     
-    def oscillator_setting(self,osc_index,osc_freq):
+    def oscillator_setting(self,osc_pars):
         """ upload on the lock-in the setting for the oscillator channel"""
-        self.daq.set("/%s/oscs/%d/freq" % (self.device_id, osc_index), osc_freq)
-
+        self.daq.set("/%s/oscs/%d/freq" % (self.device_id, osc_pars["osc_index"]), osc_pars["osc_freq"])
             
     def data_acquisition_setting(self,data_acquisition_pars):
         """upload on the lock-in all the settings for data acquisition"""
