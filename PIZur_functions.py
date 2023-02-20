@@ -104,3 +104,15 @@ def onedim_partition(scan_edges,stepsize,direction):
         targets = np.linspace(scan_edges[1],scan_edges[0],Npoints,endpoint=  True)
     return targets
 
+
+def onedim_sender(connection,targets,daq1D,dev1D):
+    """ execute 1D scan and send the raw data to another process"""
+    for index,position in enumerate(targets):
+        # read the data as soon as the trigger is detected
+        raw_data = daq1D.read(True)
+        # move axis toward point of partition
+        dev1D.MOV(dev1D.axes,position)
+        # wait until axes are on target
+        pitools.waitontarget(dev1D)
+        # store actual position onto positions
+        connection.send(raw_data)
