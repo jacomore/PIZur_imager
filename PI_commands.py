@@ -1,5 +1,4 @@
 from pipython import GCSDevice,pitools, GCS2Commands
-import zhinst.utils
 import numpy as np
 
 
