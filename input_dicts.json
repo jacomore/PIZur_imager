@@ -1,0 +1,54 @@
+{
+	"pi" : 
+		{	"ID":"C-663",
+            "stage_ID": "L-406.40SD00",
+            "refmode": "FNL",
+            "motion_direction":"FRWD",
+			"scan_edges": [0,11],
+            "stepsize" : 0.1 
+		},   
+	"zurich" : 
+		{ 
+			"device_id":"dev4910",
+            "server_host":"169.254.196.174",
+            "apilevel" : 6,
+            "server_port" : 8004
+        },
+	"input_signal_pars" : 
+		{	
+			"input_channel" : 0,
+			"ac" : 0, 
+            "imp50" : 0,
+            "range": 1.0
+        },
+	"demod_pars" :
+		{	
+			"trigger_demod_index" : 0,
+			"enable" : 1,		
+			"rate" : 10e3,
+            "adcselect" : 0,
+            "order" : 3,
+            "oscselect" : 0,
+            "harmonic" : 1,
+            "bandwidth" : 10
+        },
+	"oscillator_pars":
+		{
+			"osc_index" : 0,
+			"osc_freq" : 1e3
+		},
+	"data_acquisition_pars":
+		{	
+			"duration" : 0.05,
+			"historyLength" : 100000,
+			"device": "dev4910",
+			"grid/mode" : 4,
+			"grid/repetitions":1,
+			"endless" : 0,
+			"save/filename": "Name_of_your_file",
+			"save/fileformat": "csv",
+			"save/saveonread" : 1
+		}		
+}
+			
+	
