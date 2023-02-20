@@ -96,11 +96,6 @@ for index , position in enumerate(targets):
         # store actual position onto positions
         positions[index] = dev1D.qPOS(dev1D.axes)['1']
         print("Target:",targets[index],"Position:",positions[index])
-        final = datetime.now()
-        data = process_raw_data(signal_paths, raw_data,index)
-        print("Intermediate:",intermediate-start)
-        print("End:",end-intermediate)
-        print("Final",final - end)
     else: 
         raw_data = daq1D.read(True)
         print("Acquisition finished!")
