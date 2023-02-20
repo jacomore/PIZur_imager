@@ -1,168 +1,94 @@
-from pipython import GCSDevice,pitools, GCS2Commands
-import zhinst.utils
-from PIZur_functions import *
-import time
+from PI_commands import *
+from Zhinst_commands import zhinst_lockin
 import numpy as np
-import matplotlib.pyplot as plt
 
-# ---------------------------------------------------------
-controller = {'ID':'C-663',
-              'stage_ID': 'L-406.40SD00',
-              'refmode': 'FPL',
-              'motion_direction':'FRWD'}
-
-### Scan:
+### PI:
 scan_edges = [0,11]
 stepsize = 0.1
-# ---------------------------------------------------------
+num_grids = 1
 
-# ---------------------------------------------------------
-# ZHINST PARAMETERS:
-device_pars = { 'device_id':'dev4910',
+pi = {'ID':'C-663',
+              'stage_ID': 'L-406.40SD00',
+              'refmode': 'FNL',
+              'motion_direction':'FRWD'}
+
+zurich = { 'device_id':'dev4910',
                 'server_host':'169.254.196.174',
                 'apilevel' : 6,
                 'server_port' : 8004
                 }
 
-num_grids = 1
-
-
-### Demodulator:
+### Zurich:
+### Zurich params
 in_channel = 0          # Input channel V1
-amplitude = 1.0         # sensitivity of the lock-in
 trigger_demod_index = 0 # demodulator 1
-osc_index = 0           # oscillator of demodulator 1 (manual !!)
-demod_rate = 10e3       # demodulator sampling rate: 100 kHz
-demod_order = 4         # filtering order of the demulator
-demod_bandwidth = 10    # bandwidth of the demodulator
-frequency = 100         # frequency of the internal oscillator
-ac_filter = 0           # AC Filter; 1 = activated, 0 = deactivated
-imp50 = 0               # set 50 Ohm impedance at the entrace; 1 = activated, 0 = deactivated
-harmonic = 1            # set multiple of the oscillator frequency for demulating
-# ---------------------------------------------------------
+osc_freq = 100         # frequency of the internal oscillator
+osc_index = 0
+
+input_signal_pars = {
+                     'ac' : 0, 
+                     'imp50' : 0,
+                     'range': 1.0,
+                    }
+
+demod_pars = {'enable' : 1,
+              'rate' : 10e3,
+              'adcselect' : trigger_demod_index,
+              'order' : 3,
+              'oscselect' : osc_index,
+              'harmonic' : 1,
+              'bandwidth' : 10
+             }
+
+### Data acquisition parameters
+burst_duration = 0.05 # 50 ms
+num_cols = int(np.ceil(demod_pars["rate"]* burst_duration))  
+num_rows = int((scan_edges[1]-scan_edges[0])/stepsize - 1)  
+filename = "test"
+
+data_acquisition_pars = { 'historyLength' : 100000,
+                          'device': zurich["device_id"],
+                          'type' : 6,
+                          'triggernode' : '/dev4910/demods/0/sample.TrigIn1',
+                          'edge' : 2, 
+                          'duration' : 0.05,
+                          'delay' : 0,
+                          'holdoff/time' : 0.05,
+                          'holdoff/count' : 0,
+                          'grid/mode' : 4,
+                          'grid/repetitions':1,
+                          'grid/cols' : num_cols,
+                          'grid/rows' : num_rows,
+                          'save/directory': 'C:\\Users\\ophadmin\\Desktop\\PIZur_imager\\PIZur_imager\\Test',
+                          'endless' : 0,
+                          'save/filename': filename,
+                          'save/fileformat': 'csv',
+                          'save/saveonread' : True,
+                        }
 
 # 1) Setup the controller: switch servo-on and reference
 # ----------------------------------------------------------
-pidevice = GCSDevice(devname = controller['ID'])
-devices = pidevice.EnumerateUSB(mask=controller['ID'])
-# check that at least one device is connected        
-if not devices: 
-    raise Exception("There are no connected devices! Please, connect at least one device.")
-# print out connected devices
-for i, device in enumerate(devices):
-    print('Number ---- Device')
-    print('{}      ----  {}'.format(i,device))
-# I/O for device selection
-item = int(input('Input the index of the device to connect:'))
-pidevice.ConnectUSB(devices[item])
-print('connected: {}'.format(pidevice.qIDN().strip()))    
-# initialise the controller and the stages
-pitools.startup(pidevice, stages = controller["stage_ID"], refmodes = controller["refmode"])
-# move towards refmode and wait until stage is ready on target
-move_stage_to_ref(pidevice,controller["refmode"])
-# set trigger output to "In motion"
-configure_out_trig(pidevice,axis = 1,type = 6)
-# return values of the minimum and maximum position of the travel range of axis
-neg_edge,pos_edge = axis_edges(pidevice)
-scan_edges = target_within_axis_edges(scan_edges,[neg_edge,pos_edge])
-# ----------------------------------------------------------
+twodev = StepperChain(pi['ID'],pi['stage_ID'])
+twodev.connect_daisy([1,2])
+twodev.reference_both_stages(["FNL","FNL"])"
 
 # 2) Setup the zhinst and the data acquisition tab
 # ----------------------------------------------------------
-daq, device, props = zhinst.utils.create_api_session(device_pars["device_id"],
-                                                    device_pars["apilevel"], 
-                                                    device_pars["server_host"],
-                                                    device_pars["server_port"])
-
-# setting debugging level (the higher the value, the lower the verbosity)
-daq.setDebugLevel(6)
-# create an initial condition in which everything is deactivated (tabula rasa)
-zhinst.utils.disable_everything(daq, device)
-# calculate time constant 
-timeconstant = zhinst.utils.bw2tc(demod_bandwidth, demod_order) 
-exp_setting = [
-    ["/%s/sigins/%d/ac" % (device_pars["device_id"], in_channel), ac_filter],                                            # AC filter
-    ["/%s/sigins/%d/imp50" % (device_pars["device_id"], in_channel), imp50],                                         # match 50 Ohm impedance
-   # ["/%s/sigins/%d/autorange" % (device_id, in_channel),1], # range of the input voltage (sensitivity)
-    ["/%s/sigins/%d/range" % (device_pars["device_id"], in_channel),amplitude], # range of the input voltage (sensitivity)
-    ["/%s/demods/%d/enable" % (device_pars["device_id"], trigger_demod_index), 1],                               # switch on demodulator (?)
-    ["/%s/demods/%d/rate" % (device_pars["device_id"], trigger_demod_index), demod_rate],                             
-    #["/%s/demods/%d/adcselect" % (device_id, trigger_demod_index), in_channel],                   # selector of the signal to be converted into digital 
-    ["/%s/demods/%d/order" % (device_pars["device_id"], trigger_demod_index), demod_order],                      
-    ["/%s/demods/%d/timeconstant" % (device_pars["device_id"], trigger_demod_index), timeconstant],
-    ["/%s/demods/%d/oscselect" % (device_pars["device_id"], trigger_demod_index), osc_index],                    
-    ["/%s/demods/%d/harmonic" % (device_pars["device_id"], trigger_demod_index), harmonic],
-    ["/%s/oscs/%d/freq" % (device_pars["device_id"], osc_index), frequency],
-              ]
-# upload above defined settings
-daq.set(exp_setting)
-# Wait for the demodulator filter to settle.
-timeconstant_set = daq.getDouble(
-    "/%s/demods/%d/timeconstant" % (device, trigger_demod_index)
-    )
-time.sleep(10 * timeconstant_set)
-# perform a global synchronisation between the device and the data server")
-daq.sync()
-# Create an instance of the data acquisition module.
-daq_module = daq.dataAcquisitionModule()
-# set length of the history acquisition
-daq_module.set('historylength', 100000) # length of the history acquisition
-
-# Set the device that will be used for the trigger
-daq_module.set("device", device_pars["device_id"])
-# trigger mode 6 --> hardware trigger
-daq_module.set("type", 6)
-# set the triggernode to the Digital Trigger Port 1 in the back panel
-triggerpath = '/dev4910/demods/0/sample.TrigIn1'
-triggernode = triggerpath
-daq_module.set("triggernode", triggernode)
-# trigger on the negative edge
-daq_module.set("edge", 2)
-
-trigger_duration = 0.05
-daq_module.set("duration",trigger_duration)
-# no trigger delay
-trigger_delay = 0
-daq_module.set("delay", trigger_delay)
-# Do not return overlapped trigger events -->  set an hold-off time of 50 ms
-daq_module.set("holdoff/time", trigger_duration)
-daq_module.set("holdoff/count", 0)
-# setting grid mode "exact (on grid)"
-daq_module.set("grid/mode", 4) 
-#  Do not perform average (only 1 acquisition)
-daq_module.set("grid/repetitions", 1)
-# number of bursts and cols
-burst_duration = 0.05 # 50 ms
-num_cols = int(np.ceil(demod_rate* burst_duration))  
-# set the number of cols in the grid
-daq_module.set("grid/cols", num_cols)
-# set the number of rows in the grid
-num_rows = int((scan_edges[1]-scan_edges[0])/stepsize - 1)  
-daq_module.set("grid/rows", num_rows)
-print(num_rows)
-# direction of data saving
-daq_module.set('save/directory', 'C:\\Users\\ophadmin\\Desktop\\PIZur_imager\\PIZur_imager\\Test')
-# set endless mode to false
-daq_module.set("endless",0)
-# saving filename
-filename = "DAQ_1Dscan_test1"
-daq_module.set("save/fileformat", "csv")
-daq_module.set("save/filename", filename)
-## 'save/saveonread' - save the data each time read() is called.
-daq_module.set("save/saveonread", True)
+lock_in = zhinst_lockin(zurich)
+lock_in.input_signal_settings(in_channel,input_signal_pars)
+lock_in.demod_signal_settings(trigger_demod_index,demod_pars)
+lock_in.oscillator_setting(osc_index,osc_freq)
+# data acquisition setup
+lock_in.data_acquisition_setting(data_acquisition_pars)
 # subscribe to signals: average of module and phase of the demodulated signal
-demod_path = f"/{device_pars['device_id']}/demods/0/sample"
+demod_path = f"/{zurich['device_id']}/demods/{trigger_demod_index}/sample"
 signal_paths = []
 signal_paths.append(demod_path + ".R.avg") 
 signal_paths.append(demod_path + ".Theta.avg")  
-signal_paths.append(triggerpath)  
+signal_paths.append(data_acquisition_pars["triggernode"])  
+lock_in.subscribe_to_signals(signal_paths)
 
-data = {}
-for signal_path in signal_paths:
-    print("Subscribing to ", signal_path)
-    daq_module.subscribe(signal_path)
-    data[signal_path] = []
-
+"""
 # 3) 1D execution and data acquisition
 # ----------------------------------------------------------
 # define target positions through numpy linspace
@@ -190,6 +116,6 @@ for index , position in enumerate(targets):
         print(raw_data)
         print("Acquisition finished!")
  
-
+"""
 
     
