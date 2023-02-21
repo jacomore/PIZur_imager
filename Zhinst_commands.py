@@ -1,5 +1,7 @@
 import zhinst.utils
 import time
+import os
+import numpy as np
 
 class zhinst_lockin:
     """Setup output signals, oscillators, demodulators, and data acquisition tab of the 
@@ -40,11 +42,30 @@ class zhinst_lockin:
         # perform a global synchronisation between the device and the data server")
         self.daq.sync()
     
-    def oscillator_setting(self,osc_pars):
+    def oscillator_settings(self,osc_pars):
         """ upload on the lock-in the setting for the oscillator channel"""
         self.daq.set("/%s/oscs/%d/freq" % (self.device_id, osc_pars["osc_index"]), osc_pars["osc_freq"])
             
-    def data_acquisition_setting(self,data_acquisition_pars):
+    def join_data_acquisition_pars(self,data_acquisition_pars,demod_pars,PI):
+        """Evaluate some parameters for the data acquisition that are deduced from the 
+           other input parameters of the demodulator and of the scan."""
+        burst_duration = data_acquisition_pars["duration"]
+        num_cols = int(np.ceil(demod_pars["rate"]* burst_duration))  
+        num_rows = int((PI["scan_edges"][1]-PI["scan_edges"][0])/PI["stepsize"] - 1)  
+        triggernode = "/%s/demods/%d/sample.TrigIn1" % (self.zurich["device_id"],demod_pars["trigger_demod_index"])
+        dir_to_save = os.getcwd()+"\\"+"Results"
+
+        further_data_acquisition_pars = {
+			                    "duration" : burst_duration,
+			                    "holdoff/time" : burst_duration,
+			                    "triggernode" : triggernode,
+			                    "grid/cols" : num_cols,
+			                    "grid/rows" : num_rows,
+			                    "save/directory": dir_to_save
+                                }
+        return {**data_acquisition_pars, **further_data_acquisition_pars}
+
+    def data_acquisition_settings(self,data_acquisition_pars):
         """upload on the lock-in all the settings for data acquisition"""
         self.daq_module = self.daq.dataAcquisitionModule()
         for feature,value in data_acquisition_pars.items():
