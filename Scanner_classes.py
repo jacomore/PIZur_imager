@@ -1,11 +1,10 @@
 import json
 from PI_commands import Stepper
 from Zhinst_commands import zhinst_lockin
-from multiprocessing import Pipe, Process
+from multiprocessing import Pipe
 from pipython import pitools
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+
 from math import isclose
 
 class Scan1D: 
@@ -148,55 +147,6 @@ class Scan1D:
             print(raw_data)
             print(target)
 
-    def execute_1D_scan(self,connection):
-        """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
-            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
-            (4) sending data with the pipe to another process
-        """
-        self.dev1D =  self.master.pidevice
-        self.daq1D = self.lockin.daq_module
-        self.evaluate_target_positions()
-        self.daq1D.execute()
-        self.execute_calibration_steps()
-        for target in self.targets: 
-            if not self.daq1D.finished():
-                raw_data = self.daq1D.read(True)
-                self.dev1D.MOV(self.dev1D.axes,target)
-                pitools.waitontarget(self.dev1D)
-                connection.send([raw_data,target])
-                print("Position: ", target)
-            else:
-                connection.send(None)
-                print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
-                
-
-    def establish_pipeline(self):
-        """Setup and establishes the Pipe connection betweem the sender and the 
-           receiver processes."""
-        self.conn1 , self.conn2 = Pipe(duplex = False)
-        self.sender_process = Process(target = self.execute_1D_scan, name = "Sender", args = (self.conn2,))
-        self.receiver_process = Process(target=self.receiver, name = "Receiver", args=(self.conn1,))
-        self.sender_process.start()
-        self.receiver_process.start()
-    
-    def setup_2D_plot(self):
-        """Setup and establishes fig, ax and other objects that will be used for plotting"""
-        self.fig, self.ax = plt.subplots()
-        self.xdata, self.ydata = [],[]
-        self.ln, = self.ax.plot([],[], 'ro')
-        self.ani = FuncAnimation(self.fig, self.update, frames = self.receiver(self.conn1),init_func=self.init_plot, interval = 10, blit=True,cache_frame_data = False)
-
-    def init_plot(self):
-        """ Initialise the Axes of animated image by setting the limits
-        
-        Returns:
-            ln, : Line2D object that represents plotted data
-        """
-        self.ax.set_xlim(self.scan_edges[0],self.scan_edges[1])
-        self.ax.set_ylim(0,self.input_sig_pars["range"])
-        return self.ln,
-
-
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
 
@@ -216,37 +166,3 @@ class Scan1D:
             for signal_burst in raw_data.get(signal_path.lower(),[]):
                 value = signal_burst["value"][index,:]
                 return np.mean(value)
-
-    def receiver(self,connection):
-        """receive data from "sender.py" module. The program stops when data is received
-
-        Args:
-            connection (Connection object): is the edge of the Pipe established between plotter and sender
-
-        Yields:
-            y_data, x_data: generator that contains the appended values received from sender
-        """
-        print('Receiver: Running')
-        index = 0
-        while True:
-            in_channel = connection.recv()
-            if in_channel is None:
-                self.ani.pause()
-                print("Send is done: pausing animation.")
-                break
-            else:
-                yval = self.process_raw_data(in_channel[0],index)
-                print(yval)
-                xval = in_channel[1]
-                self.ydata.append(yval)       
-                self.xdata.append(xval)
-                index += 1
-                yield self.ydata,self.xdata
-
-
-    def update(self,data):
-        """Update frame for plotting"""
-        self.ydata.append(data[0][0])
-        self.xdata.append(data[1][0])
-        self.ln.set_data(self.xdata,self.ydata)
-        return self.ln,
