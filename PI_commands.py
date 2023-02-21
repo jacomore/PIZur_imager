@@ -38,8 +38,10 @@ class Stepper:
         string defining the referencing position
         """
         if refmode == 'FNL':
+            print("Moving stage towards negative edge...")
             self.pidevice.FNL()
         elif refmode == 'FPL':
+            print("Moving stage towards positive edge...")
             self.pidevice.FPL()
         pitools.waitontarget(self.pidevice)
         print("Stage: {}".format(GCS2Commands.qCST(self.pidevice)['1']),"successfully referenced")
