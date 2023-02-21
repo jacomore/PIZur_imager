@@ -31,7 +31,7 @@ class Scan1D:
         self.master = Stepper(self.PI["ID"],self.PI["stage_ID"]) # correct here and place only self.PI as below, more compact
         self.master.connect_pidevice()
         self.master.move_stage_to_ref(self.PI["refmode"])
-        self.master.configure_out_trig(type = self.PI["trigger_type"])
+        self.master.configure_out_trig(type = self.PI["trig_type"])
 
     def setup_lockin(self):
         """ perform all the procedures for setting up properly the lock in: input signals, oscillator, demodulator""" 
@@ -55,5 +55,5 @@ class Scan1D:
         signal_paths = []
         signal_paths.append(demod_path + ".R.avg") # this should be made an input!
         signal_paths.append(demod_path + ".Theta.avg")  # this should be made an input!
-        signal_paths.append(data_acquisition_pars["triggernode"])  
+        signal_paths.append(self.complete_daq_pars["triggernode"])  
         self.lockin.subscribe_to_signals(signal_paths)
