@@ -7,13 +7,12 @@ import numpy as np
 import json
 
 
-def execute_1D_scan(scan_obj, connection):
+def execute_1D_scan(connection,dev1D,daq1D,targets):
     """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
         (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         (4) sending data with the pipe to another process
     """
-    dev1D =  scan_obj.master.pidevice
-    daq1D = scan_obj.lockin.daq_module
+
     scan_obj.evaluate_target_positions()
     scan_obj.daq1D.execute()
     scan_obj.execute_calibration_steps()
@@ -68,9 +67,12 @@ def update(data,scan_obj):
 if __name__ == "__main__":   
     # setup instruments 
     scanner = Scan1D('input_dicts.json')
+    dev1D =  scanner.master.pidevice
+    daq1D = scanner.lockin.daq_module
+    targets = scanner.evaluate_target_positions()
     # setup connection for pipeline
     conn1 ,conn2 = Pipe(duplex = False)
-    sender_process = Process(target = execute_1D_scan, name = "Sender", args = (scanner,conn2,))
+    sender_process = Process(target = execute_1D_scan, name = "Sender", args = (conn2,dev1D,daq1D,targets))
     receiver_process = Process(target=receiver, name = "Receiver", args=(scanner,conn1,))
     sender_process.start()
     receiver_process.start()
