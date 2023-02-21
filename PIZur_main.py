@@ -1,102 +1,86 @@
-from PI_commands import *
-from Zhinst_commands import zhinst_lockin
-from PIZur_functions import *
+from Scanner_classes import Scan1D
+from multiprocess import Pipe, Process
+from pipython import pitools
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import numpy as np
 import json
-import os
-from datetime import datetime
 
-# input parameters
-f = open('input_dicts.json')
-PIZur_inputs = json.load(f)
-pi = PIZur_inputs["pi"]
-zurich = PIZur_inputs["zurich"]
-input_sig_pars = PIZur_inputs["input_signal_pars"]
-demod_pars = PIZur_inputs["demod_pars"]
-osc_pars = PIZur_inputs["oscillator_pars"]
-data_acquisition_pars = PIZur_inputs["data_acquisition_pars"]
 
-### Data acquisition parameters
-burst_duration = data_acquisition_pars["duration"]
-num_cols = int(np.ceil(demod_pars["rate"]* burst_duration))  
-num_rows = int((pi["scan_edges"][1]-pi["scan_edges"][0])/pi["stepsize"] - 1)  
-triggernode = "/%s/demods/%d/sample.TrigIn1" % (zurich["device_id"],demod_pars["trigger_demod_index"])
-dir_to_save = os.getcwd()+"\\"+"Results"
+def execute_1D_scan(scan_obj, connection):
+    """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
+        (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
+        (4) sending data with the pipe to another process
+    """
+    dev1D =  scan_obj.master.pidevice
+    daq1D = scan_obj.lockin.daq_module
+    scan_obj.evaluate_target_positions()
+    scan_obj.daq1D.execute()
+    scan_obj.execute_calibration_steps()
+    targets = np.linspace(0,10,10)
+    for target in targets: 
+        if not daq1D.finished():
+            raw_data = daq1D.read(True)
+            dev1D.MOV(dev1D.axes,target)
+            pitools.waitontarget(dev1D)
+            connection.send([10,target])
+            print("Position: ", target)
+        else:   
+            connection.send(None)
+            print("Scan is finished; data are saved in:", scan_obj.complete_daq_pars["save/directory"])
 
-further_data_acquisition_pars = {
-                    			"type" : 6,
-			                    "edge" : 2, 
-			                    "duration" : burst_duration,
-			                    "delay" : 0,
-			                    "holdoff/time" : burst_duration,
-			                    "holdoff/count" : 0,
-			                    "triggernode" : triggernode,
-			                    "grid/cols" : num_cols,
-			                    "grid/rows" : num_rows,
-			                    "save/directory": dir_to_save
-                                }
 
-data_acquisition_pars = {**data_acquisition_pars, **further_data_acquisition_pars}
+def receiver(scan_obj,connection):
+    """receive data from "sender.py" module. The program stops when data is received
 
-# 0) Setup one controller: switch servo-on and reference
-# ----------------------------------------------------------
-onedev = Stepper(pi["ID"],pi["stage_ID"])
-onedev.connect_pidevice()
-onedev.move_stage_to_ref(pi["refmode"])
-onedev.configure_out_trig(type = 6)
+    Args:
+        connection (Connection object): is the edge of the Pipe established between plotter and sender
 
-"""
-# 1) Setup the controllers: switch servo-on and reference
-# ----------------------------------------------------------
-twodev = StepperChain(pi['ID'],pi['stage_ID'])
-twodev.connect_daisy([1,2])
-twodev.reference_both_stages([pi["refmode"],pi["refmode"]])
-"""
+    Yields:
+        y_data, x_data: generator that contains the appended values received from sender
+    """
+    print('Receiver: Running')
+    index = 0
+    while True:
+        in_channel = connection.recv()
+        if in_channel is None:
+            ani.pause()
+            print("Send is done: pausing animation.")
+            break
+        else:
+            yval = scan_obj.process_raw_data(in_channel[0],index)
+            print(yval)
+            xval = in_channel[1]
+            scan_obj.ydata.append(yval)       
+            scan_obj.xdata.append(xval)
+            index += 1
+            yield scan_obj.ydata,scan_obj.xdata
 
-# 2) Setup the zhinst and the data acquisition tab
-# ----------------------------------------------------------
-lock_in = zhinst_lockin(zurich)
-lock_in.input_signal_settings(input_sig_pars)
-lock_in.demod_signal_settings(demod_pars)
-lock_in.oscillator_setting(osc_pars)
-# data acquisition setup
-lock_in.data_acquisition_setting(data_acquisition_pars)
-# subscribe to signals: average of module and phase of the demodulated signal
-demod_path = f"/{zurich['device_id']}/demods/{demod_pars['trigger_demod_index']}/sample"
-signal_paths = []
-signal_paths.append(demod_path + ".R.avg") 
-signal_paths.append(demod_path + ".Theta.avg")  
-signal_paths.append(data_acquisition_pars["triggernode"])  
-lock_in.subscribe_to_signals(signal_paths)
 
-# 3) Setup 1D analysis
-# ----------------------------------------------------------
-# define target positions through numpy linspace
-targets = onedim_partition(pi["scan_edges"],pi["stepsize"],pi["motion_direction"])
-# initialise an array with actual position that are reached by the controller
-positions = np.empty(len(targets),dtype = np.float16)
-# create instance of the pidevice
-dev1D = onedev.pidevice
-# create instance of the daq_module for 1D scan
-daq1D = lock_in.daq_module
-# starts module execution
-daq1D.execute()
+def update(data,scan_obj):
+    """Update frame for plotting"""
+    scan_obj.ydata.append(data[0][0])
+    scan_obj.xdata.append(data[1][0])
+    scan_obj.ln.set_data(scan_obj.xdata,scan_obj.ydata)
+    return scan_obj.ln,
 
-for index , position in enumerate(targets):  
-    if not daq1D.finished():
-        start = datetime.now()
-        raw_data = daq1D.read(True)
-        # read the data as soon as the trigger is detected
-        # move axis toward point of partition
-        dev1D.MOV(dev1D.axes,position)
-        # wait until axes are on target
-        intermediate = datetime.now()
-        pitools.waitontarget(dev1D)
-        end = datetime.now()
-        # store actual position onto positions
-        positions[index] = dev1D.qPOS(dev1D.axes)['1']
-        print("Target:",targets[index],"Position:",positions[index])
-    else: 
-        raw_data = daq1D.read(True)
-        print("Acquisition finished!")
- 
+
+if __name__ == "__main__":   
+    # setup instruments 
+    scanner = Scan1D('input_dicts.json')
+    # setup connection for pipeline
+    conn1 ,conn2 = Pipe(duplex = False)
+    sender_process = Process(target = execute_1D_scan, name = "Sender", args = (scanner,conn2,))
+    receiver_process = Process(target=receiver, name = "Receiver", args=(scanner,conn1,))
+    sender_process.start()
+    receiver_process.start()
+
+    # setup two dimensional plots
+    fig, ax = plt.subplots()
+    xdata, ydata = [],[]
+    ln, = ax.plot([],[], 'ro')
+    ani = FuncAnimation(fig, update, frames = receiver(scanner,conn1), interval = 10, blit=True, fargs = (scanner,),cache_frame_data = False)
+
+    
+
+    
