@@ -14,7 +14,7 @@ class Scan1D:
     def __init__(self,filename):
         """Unpack all the necessary parameters necessary for performing the 1D scan
            and the analysis. Parameters are then instantiated in the instruments by using
-           the respective classes. Eventually, 1D is performed.
+           the respective classes. Eventually, 1D scan is performed.
 
            Arguments
            -------
@@ -49,7 +49,7 @@ class Scan1D:
         self.lockin.demod_signal_settings(self.demod_pars)
     
     def setup_data_acquisition(self):
-        """ perform all the procedures for setting up properly the PI device"""
+        """ perform all the procedures for setting up properly the data_acquisition tab of the lockin"""
         data_acquisition_pars = self.InPars["data_acquisition_pars"] 
         self.complete_daq_pars = self.lockin.join_data_acquisition_pars(
                                                                         data_acquisition_pars,
@@ -66,11 +66,6 @@ class Scan1D:
 
     def input_new_scan_edges(self):
         """Asks for and returns new edges for the 1D scan
-        
-        Parameters
-        ----------
-        axis_edges : list
-            Two float elements with the physical edges of the axes
         """ 
         print(f"Invalid input: desired scan range [{self.scan_edges[0]},{self.scan_edges[1]}] is not within axis range: [{self.axis_edges[0]},{self.axis_edges[1]}]")
         while True: 
@@ -140,11 +135,29 @@ class Scan1D:
         """
         calibration_steps = self.evaluate_calibration_steps()
         for target in calibration_steps:
-            raw_data = self.lockin.daq_module.read(True)
+            self.lockin.daq_module.read(True)
             self.master.pidevice.MOV(self.master.pidevice.axes,target)
-            pitools.waitontarget(self.self.master.pidevice)
-            print(raw_data)
-            print(target)
+            pitools.waitontarget(self.master.pidevice)
+
+    def execute_1D_scan(self):
+        """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
+            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
+        """
+        demod_values = []
+        covered_pos = []
+        self.evaluate_target_positions()
+        self.lockin.daq_module.execute()
+        self.execute_calibration_steps()
+        for index,target in enumerate(self.targets): 
+            if not self.lockin.daq_module.finished():
+                raw_data = self.lockin.daq_module.read(True)
+                self.master.pidevice.MOV(self.master.pidevice.axes,target)
+                pitools.waitontarget(self.master.pidevice)
+                demod_values.append(self.process_raw_data(raw_data,index))
+                covered_pos.append(target)
+                yield [demod_values,covered_pos]
+            else:   
+                print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
 
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
@@ -153,15 +166,17 @@ class Scan1D:
         ----------
         raw_data : dict
             dictionary in which read data are stored
-        print_cols : index
-            index : int
+        index : int
             number that contains the number of step of the scan so far
 
         Returns
         -------
         average value 
         """
+        demod_values = []
         for signal_path in self.signal_paths:
             for signal_burst in raw_data.get(signal_path.lower(),[]):
-                value = signal_burst["value"][index,:]
-                return np.mean(value)
+                demod_values.append(np.mean(signal_burst["value"][index,:]))
+        
+        return demod_values
+        
