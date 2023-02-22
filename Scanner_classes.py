@@ -4,7 +4,6 @@ from Zhinst_commands import zhinst_lockin
 from multiprocessing import Pipe
 from pipython import pitools
 import numpy as np
-
 from math import isclose
 
 class Scan1D: 
@@ -105,7 +104,7 @@ class Scan1D:
         elif self.PI["motion_direction"] == "BCWD":
             self.targets = np.linspace(self.scan_edges[1],self.scan_edges[0],Npoints,endpoint=  True)
 
-    def evaluate_delta_x(self):
+    def evaluate_first_target_distance(self):
         """evaluate the first target of the scan (first_target) and the reference target (ref_target)
         """
         # evaluate first target 
@@ -125,7 +124,7 @@ class Scan1D:
         """evaluate the two intermediate step before the start of the real scan procedure for loading 
            all the parameter into the ROM of the zurich 
         """
-        first_target, ref_target = self.evaluate_delta_x()
+        first_target, ref_target = self.evaluate_first_target_distance()
         delta_x = first_target - ref_target
         stepsize = self.PI["stepsize"]
         if isclose(delta_x,0.,abs_tol=1e-4):   # reference point is the same as the starting point of the scan
@@ -141,9 +140,9 @@ class Scan1D:
         """
         calibration_steps = self.evaluate_calibration_steps()
         for target in calibration_steps:
-            raw_data = self.daq1D.read(True)
-            self.dev1D.MOV(self.dev1D.axes,target)
-            pitools.waitontarget(self.dev1D)
+            raw_data = self.lockin.daq_module.read(True)
+            self.master.pidevice.MOV(self.master.pidevice.axes,target)
+            pitools.waitontarget(self.self.master.pidevice)
             print(raw_data)
             print(target)
 
