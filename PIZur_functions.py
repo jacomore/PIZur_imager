@@ -20,12 +20,10 @@ def process_raw_data(signal_paths,raw_data,index):
     _ : float
         value that contains the average over the columns
     """
-    for i, signal_path in enumerate(signal_paths):
+    for signal_path in enumerate(signal_paths):
         for signal_burst in raw_data.get(signal_path.lower(),[]):
-            # skip the first two steps (required for calibration)
-            if index >= 2:
-                value = signal_burst["value"][index-2,:]
-                return np.mean(value)
+            value = signal_burst["value"][index,:]
+            return np.mean(value)
 
 
 def onedim_sender(connection,targets,daq1D,dev1D):
