@@ -1,10 +1,8 @@
 from Scanner_classes import Scan1D
-from multiprocess import Pipe, Process
+from multiprocessing import Pipe, Process
 from pipython import pitools
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import numpy as np
-import json
 
 
 def execute_1D_scan(scan_obj,connection):
@@ -54,7 +52,7 @@ def receiver(scan_obj,connection):
             yield ydata,xdata
 
 
-def update(data,scan_obj):
+def update(data):
     """Update frame for plotting"""
     ydata.append(data[0][0])
     xdata.append(data[1][0])
