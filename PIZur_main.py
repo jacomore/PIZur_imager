@@ -7,22 +7,21 @@ import numpy as np
 import json
 
 
-def execute_1D_scan(connection,dev1D,daq1D,targets):
+def execute_1D_scan(scan_obj,connection):
     """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
         (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         (4) sending data with the pipe to another process
     """
 
     scan_obj.evaluate_target_positions()
-    scan_obj.daq1D.execute()
+    scan_obj.lockin.daq_module.execute()
     scan_obj.execute_calibration_steps()
-    targets = np.linspace(0,10,10)
-    for target in targets: 
-        if not daq1D.finished():
-            raw_data = daq1D.read(True)
-            dev1D.MOV(dev1D.axes,target)
-            pitools.waitontarget(dev1D)
-            connection.send([10,target])
+    for target in scan_obj.targets: 
+        if not scan_obj.lockin.daq_module.finished():
+            raw_data = scan_obj.lockin.daq_module.read(True)
+            scan_obj.master.pidevice.MOV(scan_obj.master.pidevice.axes,target)
+            pitools.waitontarget(scan_obj.master.pidevice)
+            connection.send([raw_data,target])
             print("Position: ", target)
         else:   
             connection.send(None)
@@ -30,13 +29,13 @@ def execute_1D_scan(connection,dev1D,daq1D,targets):
 
 
 def receiver(scan_obj,connection):
-    """receive data from "sender.py" module. The program stops when data is received
+    """receive data from "execute_1D_scan" module. The program stops when data is received
 
     Args:
         connection (Connection object): is the edge of the Pipe established between plotter and sender
 
     Yields:
-        y_data, x_data: generator that contains the appended values received from sender
+        y_data, x_data: generator that contains the appended values received from execute_1D_scan
     """
     print('Receiver: Running')
     index = 0
@@ -67,12 +66,9 @@ def update(data,scan_obj):
 if __name__ == "__main__":   
     # setup instruments 
     scanner = Scan1D('input_dicts.json')
-    dev1D =  scanner.master.pidevice
-    daq1D = scanner.lockin.daq_module
-    targets = scanner.evaluate_target_positions()
     # setup connection for pipeline
     conn1 ,conn2 = Pipe(duplex = False)
-    sender_process = Process(target = execute_1D_scan, name = "Sender", args = (conn2,dev1D,daq1D,targets))
+    sender_process = Process(target = execute_1D_scan, name = "Sender", args = (scanner,conn2,))
     receiver_process = Process(target=receiver, name = "Receiver", args=(scanner,conn1,))
     sender_process.start()
     receiver_process.start()
