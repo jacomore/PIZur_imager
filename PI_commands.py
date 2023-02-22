@@ -46,7 +46,7 @@ class Stepper:
         pitools.waitontarget(self.pidevice)
         print("Stage: {}".format(GCS2Commands.qCST(self.pidevice)['1']),"successfully referenced")
             
-    def axis_edges(self):
+    def find_axis_edges(self):
         """Returns the values of the edges of the axis, which define the scannable range"
         """
         neg_edge = list(self.pidevice.qTMN().values())
