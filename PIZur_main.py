@@ -47,20 +47,19 @@ def receiver(scan_obj,connection):
             break
         else:
             yval = scan_obj.process_raw_data(in_channel[0],index)
-            print(yval)
             xval = in_channel[1]
-            scan_obj.ydata.append(yval)       
-            scan_obj.xdata.append(xval)
+            ydata.append(yval)       
+            xdata.append(xval)
             index += 1
-            yield scan_obj.ydata,scan_obj.xdata
+            yield ydata,xdata
 
 
 def update(data,scan_obj):
     """Update frame for plotting"""
-    scan_obj.ydata.append(data[0][0])
-    scan_obj.xdata.append(data[1][0])
-    scan_obj.ln.set_data(scan_obj.xdata,scan_obj.ydata)
-    return scan_obj.ln,
+    ydata.append(data[0][0])
+    xdata.append(data[1][0])
+    ln.set_data(xdata,ydata)
+    return ln,
 
 
 if __name__ == "__main__":   
