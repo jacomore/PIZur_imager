@@ -54,7 +54,9 @@ class zhinst_lockin:
            other input parameters of the demodulator and of the scan."""
         burst_duration = data_acquisition_pars["duration"]
         num_cols = int(np.ceil(demod_pars["rate"]* burst_duration))  
-        num_rows = int((PI["master_scan_edges"][1]-PI["master_scan_edges"][0])/PI["stepsize"] + 3)  
+        num_rows_master = int((PI["master_scan_edges"][1]-PI["master_scan_edges"][0])/PI["master_stepsize"] + 1)  
+        num_rows = int((PI["servo_scan_edges"][1]-PI["servo_scan_edges"][0])/PI["servo_stepsize"] + 3)
+       # num_rows = num_rows_master*num_rows_servo + 2
         triggernode = "/%s/demods/%d/sample.TrigIn1" % (self.device_id,demod_pars["trigger_demod_index"])
         dir_to_save = os.getcwd()+"\\"+"Results"
 
