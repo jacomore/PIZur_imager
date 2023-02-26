@@ -85,7 +85,7 @@ class Stepper:
         pitools.waitontarget(self.pidevice)
         print(f"Stage: {GCS2Commands.qCST(self.pidevice)['1']} successfully referenced.")
             
-    def axis_edges(self):
+    def evaluate_axis_edges(self):
         """Returns the values of the edges of the axis, which define the scannable range."""
         neg_edge = list(self.pidevice.qTMN().values())
         pos_edge = list(self.pidevice.qTMX().values())
@@ -94,6 +94,15 @@ class Stepper:
     def get_curr_pos(self):
         """Returns the current position of the axis"""
         return self.pidevice.qPOS(self.pidevice)['1']
+
+    def set_velocity(self,velocity):
+        """ Set the velocity of the master device"""
+        self.pidevice.VEL('1',velocity)
+        
+    def move_stage_to_target(self,target):
+        """ move the device to target. target is a number (float)"""
+        self.pidevice.MOV(self.pidevice.axes,target)
+        pitools.waitontarget(self.pidevice)
 
     def configure_out_trigger(self, trigger_type):
         """Configures and sets the output trigger for a given axis.
@@ -176,3 +185,5 @@ class StepperChain:
         """
         self.master.configure_out_trig(trigger_types[0])
         self.servo.configure_out_trig(trigger_types[1])
+        
+    
