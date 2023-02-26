@@ -90,6 +90,10 @@ class Stepper:
         neg_edge = list(self.pidevice.qTMN().values())
         pos_edge = list(self.pidevice.qTMX().values())
         return [neg_edge[0], pos_edge[0]]
+    
+    def get_curr_pos(self):
+        """Returns the current position of the axis"""
+        return self.pidevice.qPOS(self.pidevice)['1']
 
     def configure_out_trigger(self, trigger_type):
         """Configures and sets the output trigger for a given axis.
@@ -160,8 +164,8 @@ class StepperChain:
         ref_modes (List[str]): List of two strings defining the referencing modes.
         """
         self.master.move_stage_to_ref(ref_modes[0])
-        self.servo.move_stage_to_ref(ref_modes[1])
-
+        self.servo.move_stage_to_ref(ref_modes[1])    
+    
     def configure_both_trig(self, trigger_types) -> None:
         """Configures the output trigger modes of the two devices.
 
