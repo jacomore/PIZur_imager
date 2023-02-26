@@ -11,7 +11,8 @@
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
             "refmode": "FNL",
-            "motion_direction":"FRWD"
+            "motion_direction":"FRWD",
+			"velocity" : 10
 		},   
 	"zurich" : 
 		{ 
