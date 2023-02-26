@@ -1,12 +1,17 @@
-{
+{	"scan_pars" :
+		{			
+			"type": "continous",
+			"dim" : 1,
+			"scan_edges": [0,11],
+            "stepsize" : 0.1,
+			"scan_edges_servo": [0,11],
+            "stepsize_servo" : 0.1
+		},
 	"pi" : 
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
             "refmode": "FNL",
-            "motion_direction":"FRWD",
-			"scan_edges": [0,11],
-            "stepsize" : 0.1, 
-			"trig_type" : 6
+            "motion_direction":"FRWD"
 		},   
 	"zurich" : 
 		{ 
