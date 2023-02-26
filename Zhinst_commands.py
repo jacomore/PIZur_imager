@@ -102,7 +102,20 @@ class zhinst_lockin:
                 raise Exception("Type of scan in input is not valid! Type either continous or discrete.") 
         else:
             raise Exception("Scan dimension parameter (dim) in input is not valid! Type either continous or discrete.") 
-    
+        
+    def evaluate_burst_duration(self,scan_pars):
+        """Evaluate the duration of the scan depending on whether the scan type is continous or discrete"""
+        if scan_pars["type"] == "continous": 
+            return (scan_pars["scan_edges"][1]-scan_pars[0])/scan_pars["velocity"]
+        else:
+            return 0.05 # 50 ms
+        
+    def evaluate_trigger_edge(self,scan_pars):
+        if scan_pars["type"] == "continous":
+            return 1 # trig on the positive edge
+        else:
+            return 2 # trig on the negative edge
+            
     def join_data_acquisition_pars(self,data_acquisition_pars,demod_pars,scan_pars):
         """Evaluate some parameters for the data acquisition from demod_pars and scan_pars
         
@@ -111,10 +124,12 @@ class zhinst_lockin:
                     for the data acquisition
             demod_pars (dict): a dictionary containing the parameters for the demudolator
             scan_pars (dict): a dictionary containing the scan parameters.    
-        """
-        burst_duration = data_acquisition_pars["duration"]
-        num_cols = int(np.ceil(demod_pars["rate"]* burst_duration))  
+        """ 
         num_rows = self.evaluate_nrows(scan_pars)
+        burst_duration = self.evaluate_burst_duration(scan_pars)
+        trig_edge = self.evaluate_trigger_edge(scan_pars)
+        
+        self.num_cols = int(np.ceil(demod_pars["rate"]* burst_duration))  
         triggernode = "/%s/demods/%d/sample.TrigIn1" % (self.device_id,demod_pars["trigger_demod_index"])
         dir_to_save = os.getcwd()+"\\"+"Results"
 
@@ -122,9 +137,10 @@ class zhinst_lockin:
 			                    "duration" : burst_duration,
 			                    "holdoff/time" : burst_duration,
 			                    "triggernode" : triggernode,
-			                    "grid/cols" : num_cols,
+			                    "grid/cols" : self.num_cols,
 			                    "grid/rows" : num_rows,
-			                    "save/directory": dir_to_save
+			                    "save/directory": dir_to_save,
+                                "edge" : trig_edge
                                 }
         return {**data_acquisition_pars, **further_data_acquisition_pars}
 
