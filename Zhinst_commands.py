@@ -91,10 +91,10 @@ class zhinst_lockin:
             
         elif scan_pars["dim"] == 2: 
             if scan_pars["type"] == "continous":
-                return int(np.floor((scan_pars["servo_scan_edges"][1]-scan_pars["servo_scan_edges"][0])/scan_pars["servo_stepsize"] + 3))   # servo is responsible for discrete motion along lines
+                return int(np.floor((scan_pars["scan_edges_servo"][1]-scan_pars["scan_edges_servo"][0])/scan_pars["stepsize_servo"] + 3))   # servo is responsible for discrete motion along lines
             elif scan_pars["type"] == "discrete":
                 pixel_per_line = int(np.floor((scan_pars["scan_edges"][1]-scan_pars["scan_edges"][0])/scan_pars["stepsize"])) + 1 
-                number_of_line = int(np.floor((scan_pars["servo_scan_edges"][1]-scan_pars["servo_scan_edges"][0])/scan_pars["servo_servo_stepsize"])) + 1
+                number_of_line = int(np.floor((scan_pars["scan_edges_servo"][1]-scan_pars["scan_edges_servo"][0])/scan_pars["servo_stepsize_servo"])) + 1
                 nrows = pixel_per_line*number_of_line + 2 # + 2 for calibration
                 return nrows
             else: 
@@ -129,7 +129,7 @@ class zhinst_lockin:
         burst_duration = self.evaluate_burst_duration(scan_pars)
         trig_edge = self.evaluate_trigger_edge(scan_pars)
         
-        self.num_cols = int(np.ceil(demod_pars["rate"]*burst_duration))  
+        self.num_cols = 200 
         triggernode = "/%s/demods/%d/sample.TrigIn1" % (self.device_id,demod_pars["trigger_demod_index"])
         dir_to_save = os.getcwd()+"\\"+"Results"
 

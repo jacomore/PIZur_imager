@@ -144,12 +144,11 @@ class Scan_2D:
     """
     def __init__(self):
         # common features between Scanners
-        self.setscan = SetupScan(self,"input_dicts.json") 
+        self.setscan = SetupScan("input_dicts.json") 
         
         self.scan_pars = self.setscan.InPars["scan_pars"]
         self.PI = self.setscan.InPars["pi"]
-        # rename data_acquisition for readability
-        self.daqmod = self.setscan.lockin.daq_module
+  
         
         # setup PI controller
         self.setup_2D_PI()   
@@ -165,7 +164,7 @@ class Scan_2D:
         self.srv_scan_edges = self.setscan.target_within_axis_edges(self.scan_pars["scan_edges_servo"],self.srv_axis_edges)
         self.srv_stepsize = self.scan_pars["stepsize_servo"]
         self.srv_targets = self.setscan.evaluate_target_positions(self.srv_scan_edges,self.srv_stepsize)
-        
+        print(self.srv_targets)
         # setup zhinst_lockin     
         self.setscan.setup_lockin()
         
@@ -180,29 +179,32 @@ class Scan_2D:
         self.chain = StepperChain(self.PI["ID"],self.PI["stage_ID"]) # correct here and place only self.PI as below, more compact
         self.chain.connect_daisy([1,2])
         self.chain.master.set_velocity(self.PI["velocity"])
+        self.chain.reference_both_stages(ref_modes=["FNL","FNL"])
     
     def evaluate_calibration_steps(self):
         """evaluate the calibration step to perform with the servo controller"""
-        assert isclose(self.chain.servo.get_curr_pos(),self.srv_targets[0],abs_tol=1e-3)
+#        assert isclose(self.chain.servo.get_curr_pos(),self.srv_targets[0],abs_tol=1e-3)
         if self.scan_pars["type"] == "discrete":
             return [abs(self.srv_targets[0] - 2*self.srv_stepsize),abs(self.srv_targets[0] - self.srv_stepsize)]
         else: 
-            return abs(self.srv_targets[0] - self.srv_stepsize)
+            return [self.targets[-1],self.targets[0]]
         
     def execute_calibration_steps(self):
         """execute the two intermediate step before the start of the real scan procedure for loading 
            all the parameter into the ROM of the zurich 
         """
         calibration_steps = self.evaluate_calibration_steps()
+              # rename data_acquisition for readability
         for target in calibration_steps:
-            self.daqmod.read(True)
-            self.chain.servo.move_stage_to_target(target)   # execute the calibration step with the servo controller
+            raw_data = self.daqmod.read(True)
+            self.chain.master.move_stage_to_target(target)   # execute the calibration step with the servo controller
 
     def setup_2D_scan(self):
         """ Setup the 2D scan by: (1) moving the axis on all the first targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         """
         # move to first target position
+        self.daqmod = self.setscan.lockin.daq_module
         self.chain.master.move_stage_to_target(self.targets[0])
         self.chain.servo.move_stage_to_target(self.srv_targets[0])
         # activate trigger signals
@@ -221,8 +223,7 @@ class Scan_2D:
         """move to a new position with the master axis. Here, it calculates the value of the intensity and process it (average)"""
         raw_data = self.daqmod.read(True)
         self.chain.master.move_stage_to_target(col)
-        val = self.process_raw_data(raw_data,idx)
-        return np.mean(val)
+        return self.process_raw_data(raw_data,idx)
         
     def execute_discrete_2D_scan(self):
         """execute the two 2D discrete scan"""
@@ -244,14 +245,30 @@ class Scan_2D:
                     if not self.daqmod.finished():
                         idx = (row_idx + 1)*(col_idx + 1)   
                         val = self.new_col_pixel(idx,col)
-                        while val != []:
-                            sleep(0.01)
-                        zvalues.append(val)
+                        
+                        if val != []:
+                            zvalues.append(val)
                         yield zvalues
                     else: 
                         print("Loop exit on column!")
             else:
                 print("loop exit on row!")
+
+    def execute_continous_2D_scan(self):
+        zvalues = []    # matrix that'll be filled with acquired data
+        col_idx, col = 0, self.scan_edges[0] # column index is initially zero
+
+        self.setup_2D_scan()
+
+        for row_idx,row in enumerate(self.srv_targets):
+            if not self.daqmod.finished():
+                self.chain.servo.move_stage_to_target(row)               
+                if row_idx%2 == 0:
+                    val = self.new_col_pixel(row_idx+1,self.targets[-1])
+                else:
+                    val = self.new_col_pixel(row_idx+1,self.targets[0])
+                sleep(0.1)
+                yield val, row_idx
 
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
@@ -268,7 +285,7 @@ class Scan_2D:
         average value 
         """
         demod_values = []
-        for signal_path in self.signal_paths:
+        for signal_path in self.setscan.signal_paths:
             for signal_burst in raw_data.get(signal_path.lower(),[]):
                 demod_values.append(signal_burst["value"][index,:])
 

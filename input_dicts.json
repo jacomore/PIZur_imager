@@ -1,8 +1,8 @@
 {	"scan_pars" :
 		{			
 			"type": "continous",
-			"dim" : 1,
-			"scan_edges": [0,11],
+			"dim" : 2,
+			"scan_edges": [0,4],
             "stepsize" : 0.1,
 			"scan_edges_servo": [0,11],
             "stepsize_servo" : 0.1,
@@ -14,7 +14,7 @@
             "refmode": "FNL",
 			"refmode_servo": "FNL",
             "motion_direction":"FRWD",
-			"velocity" : 10
+			"velocity" : 3
 		},   
 	"zurich" : 
 		{ 
@@ -51,7 +51,7 @@
 			"duration" : 0.05,
 			"historyLength" : 10000000000,
 			"device": "dev4910",
-			"grid/mode" : 4,
+			"grid/mode" : 2,
 			"grid/overwrite" : 1,
 			"grid/repetitions":1,
 			"endless" : 0,

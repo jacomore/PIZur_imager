@@ -158,13 +158,13 @@ class StepperChain:
         dev_indices (List[int]): List of two integer numbers defining the connection
             of the two devices (1 = master, 2 = Servo).
         """
-        devices = self.master.USB_plugged_device()
+        devices = self.master.usb_plugged_devices()
         self.master.pidevice.OpenUSBDaisyChain(description=devices[0])
         daisy_chain_id = self.master.pidevice.dcid
         self.master.pidevice.ConnectDaisyChainDevice(dev_indices[0], daisy_chain_id)
-        pitools.startup(self.master.pidevice, self.master.axis_ID)
+        pitools.startup(self.master.pidevice, self.master.axis_id)
         self.servo.pidevice.ConnectDaisyChainDevice(dev_indices[1], daisy_chain_id)
-        pitools.startup(self.servo.pidevice, self.master.axis_ID)
+        pitools.startup(self.servo.pidevice, self.servo.axis_id)
 
     def reference_both_stages(self, ref_modes) -> None:
         """References both stages.
@@ -183,7 +183,7 @@ class StepperChain:
             (6 == in Motion, 1 = Line trigger); first element is associated with master,
             second with servo.
         """
-        self.master.configure_out_trig(trigger_types[0])
-        self.servo.configure_out_trig(trigger_types[1])
+        self.master.configure_out_trigger(trigger_types[0])
+        self.servo.configure_out_trigger(trigger_types[1])
         
     
