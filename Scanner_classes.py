@@ -11,12 +11,10 @@ class Scan1D:
     """Scan designed to perform 1D scan"""
     def __init__(self):
         # common features between Scanners
-        self.setscan = SetupScan(self,"input_dicts.json") 
+        self.setscan = SetupScan("input_dicts.json") 
         
         self.scan_pars = self.setscan.InPars["scan_pars"]
         self.PI = self.setscan.InPars["pi"]
-        # rename data_acquisition for readability
-        self.daqmod = self.setscan.lockin.daq_module
          
         # setup PI controller
         self.setup_1D_PI()   
@@ -26,7 +24,8 @@ class Scan1D:
         self.scan_edges = self.setscan.target_within_axis_edges(self.scan_pars["scan_edges"],self.axis_edges)
         self.stepsize = self.scan_pars["stepsize"]
         self.targets = self.setscan.evaluate_target_positions(self.scan_edges,self.stepsize)
-        
+
+
         # setup zhinst_lockin     
         self.setscan.setup_lockin()
         
@@ -41,65 +40,80 @@ class Scan1D:
         self.master = Stepper(self.PI["ID"],self.PI["stage_ID"]) # correct here and place only self.PI as below, more compact
         self.master.connect_pidevice()
         self.master.set_velocity(self.PI["velocity"])
-        self.master.move_stage_to_ref(self.PI["refmode"])       
+        #self.master.move_stage_to_ref(self.PI["refmode"])       
         
     def evaluate_calibration_steps(self):
         """evaluate the calibration step to perform with the master controller"""
-        assert isclose(self.master.get_curr_pos(),self.targets[0],abs_tol=1e-3)
+      #  assert isclose(self.master.get_curr_pos(),self.targets[0],abs_tol=1e-3)
         if self.scan_pars["type"] == "discrete":
             return [abs(self.targets[0] - 2*self.stepsize),abs(self.targets[0] - self.stepsize)]
         else: 
-            return abs(self.targets[0] - self.stepsize)
+            return [self.targets[-1],self.targets[0]]
 
     def execute_calibration_steps(self):
         """execute the two intermediate step before the start of the real scan procedure for loading 
            all the parameter into the ROM of the zurich 
         """
-        calibration_steps = self.evaluate_calibration_steps(self.targets[0])
+        calibration_steps = self.evaluate_calibration_steps()
+        print(calibration_steps)
         for target in calibration_steps:
             self.daqmod.read(True)
             self.master.move_stage_to_target(target)
+            print(self.setscan.lockin.daq_module.finished())
+            print(self.setscan.lockin.daq_module.progress())
+            sleep(0.1)
+
 
     def setup_1D_scan(self):
         """ Setup the 1D scan by: (1) moving the axis on all the targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         """
-        self.master.move_stage_to_target(self.target[0])
+                # rename data_acquisition for readability
+        self.daqmod = self.setscan.lockin.daq_module
+        self.master.move_stage_to_target(self.targets[0])
         self.master.configure_out_trigger(trigger_type=6)
         self.daqmod.execute()
-        self.execute_calibration_steps(self.targets[0])
+        self.execute_calibration_steps()
         
     def execute_discrete_1D_scan(self):
         """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         """
-        xdata, ydata = []
+        xdata, ydata = [], []
+        print(self.targets)
         self.setup_1D_scan()
         for idx,target in enumerate(self.targets):
             if not  self.daqmod.finished():
                 raw_data = self.daqmod.read(True)
                 self.master.move_stage_to_target(target)        
-                print("Position:",target,"Progress:",np.floor(self.daqmod.progress()[0])*100,"%")
+                print("Progress:",np.floor(self.daqmod.progress())*100,"%")
                 yval = self.process_raw_data(raw_data,idx)
+                sleep(0.1)
                 
                 if yval != []:
                     xdata.append(target)
                     ydata.append(np.mean(yval))
+                    print("Position:",target,"Value: ",np.mean(yval))
                     yield ydata,xdata
-                    
+                print("----------------")
             else:   
-                print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
+                print("Scan is finished")
     
     def execute_continous_1D_scan(self):
         """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) moving continously
         """
-        xdata = np.linspace(self.targets[0],self.targets[1],self.setscan.lockin.num_cols)
+        xdata = np.linspace(self.targets[0],self.targets[-1],self.setscan.lockin.num_cols)
         self.setup_1D_scan()
+        print(self.setscan.lockin.daq_module.finished())
+        print(self.setscan.lockin.daq_module.progress())
+
         raw_data = self.daqmod.read(True)
-        self.master.move_stage_to_target(self.targets[1])
+        self.master.move_stage_to_target(self.targets[-1])
+        sleep(0.1)
         ydata = self.process_raw_data(raw_data,0)
-        return ydata,xdata
+        print(ydata,xdata)
+        yield ydata,xdata
         
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
@@ -116,7 +130,7 @@ class Scan1D:
         average value 
         """
         demod_values = []
-        for signal_path in self.signal_paths:
+        for signal_path in self.setscan.signal_paths:
             for signal_burst in raw_data.get(signal_path.lower(),[]):
                 demod_values.append(signal_burst["value"][index,:])
 
@@ -238,112 +252,6 @@ class Scan_2D:
                         print("Loop exit on column!")
             else:
                 print("loop exit on row!")
-                
-            
-                            
-        
-            
-            
-        
-
-    def execute_discrete_1D_scan(self):
-        """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
-            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
-        """
-        xdata, ydata = []
-        self.setup_1D_scan()
-        for idx,target in enumerate(self.targets):
-            if not  self.daqmod.finished():
-                raw_data = self.daqmod.read(True)
-                self.master.move_stage_to_target(target)        
-                print("Position:",target,"Progress:",np.floor(self.daqmod.progress()[0])*100,"%")
-                yval = self.process_raw_data(raw_data,idx)    
-                if yval != []:
-                    xdata.append(target)
-                    ydata.append(np.mean(yval))
-                    yield ydata,xdata
-                    
-            else:   
-                print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
-    
-
-
-
-    def execute_2D_discrete_scan(self):
-        servo_pos,master_pos,values = [],[], []
-
-        master_targets = self.evaluate_target_positions(self.twodev.master.scan_edges,self.twodev.master.stepsize)
-        servo_targets = self.evaluate_target_positions(self.twodev.master.scan_edges,self.twodev.servo.stepsize)
-
-        self.lockin.daq_module.execute()
-        self.execute_calibration_steps(master_targets[0],self.twodev.master.stepsize,servo_targets[0])
-        
-        row_index = 0
-        col_index = 0
-        col = 0
-        print(master_targets)
-        for row in master_targets:
-            if not self.lockin.daq_module.finished():
-                raw_data = self.lockin.daq_module.read(True)
-                self.twodev.master.pidevice.MOV(self.twodev.master.pidevice.axes,row)
-                pitools.waitontarget(self.twodev.master.pidevice)
-                sleep(0.1)
-                z_val = self.process_raw_data(raw_data,(row_index+1)*(col_index+1))
-                if z_val != []:
-                    print("row:",row,"col:",col,"value:",z_val)
-                    master_pos.append(row)
-                    values.append(z_val[0])
-                    servo_pos.append(col)
-                    yield values,master_pos,servo_pos
-                row_index = row_index + 1
-                for col in servo_targets:
-                        if not self.lockin.daq_module.finished():
-                            raw_data = self.lockin.daq_module.read(True)
-                            self.twodev.servo.pidevice.MOV(self.twodev.servo.pidevice.axes,row)
-                            pitools.waitontarget(self.twodev.servo.pidevice)
-                            z_val = self.process_raw_data(raw_data,(row_index+1)*(col_index+1))
-                            if z_val != []:
-                                print("row:",row,"col:",col,"value:",z_val)
-                                master_pos.append(row)
-                                servo_pos.append(col)
-                                values.append(z_val[0])
-                                yield values,master_pos,servo_pos
-                                print("Progress:",np.floor(self.lockin.daq_module.progress()[0])*100,"%")
-                                self.twodev.servo.scan_edges = np.flip(self.twodev.master.scan_edges)
-                            else:   
-                                print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
-            else:   
-                print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
-
-    def execute_2D_continous_scan(self):
-        servo_pos,master_pos, values = [],[],[]
-
-        master_targets = self.evaluate_target_positions(self.twodev.master.scan_edges,self.twodev.master.stepsize)
-        servo_targets = self.evaluate_target_positions(self.twodev.master.scan_edges,self.twodev.servo.stepsize)
-
-        self.lockin.daq_module.execute()
-        self.execute_calibration_steps(master_targets[0],self.twodev.master.stepsize,servo_targets[0])
-        
-        self.twodev.master.pidevice.VEL('1',10)
-
-        for row_index,row in enumerate(servo_targets):
-            if not self.lockin.daq_module.finished():
-                self.twodev.servo.pidevice.MOV(self.twodev.servo.pidevice.axes,row)
-                pitools.waitontarget(self.twodev.master.pidevice)
-                raw_data = self.lockin.daq_module.read(True)
-                self.twodev.master.pidevice.MOV(self.twodev.master.pidevice.axes,self.twodev.master.scan_edges[1])
-                pitools.waitontarget(self.twodev.servo.pidevice)
-                z_val = self.process_raw_data(raw_data,(row_index))
-                if z_val != []:
-                    print("row:",row,"value:",z_val[0][:10])
-                    print("trig val:",z_val[1])
-                    values.append(z_val[0])
-                    yield values,row_index
-                    print("Progress:",np.floor(self.lockin.daq_module.progress()[0])*100,"%")
-                    self.twodev.master.scan_edges = np.flip(self.twodev.master.scan_edges)
-            else:   
-                    print("Scan is finished; data are saved in:", self.complete_daq_pars["save/directory"])
-    
 
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
