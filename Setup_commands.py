@@ -17,6 +17,8 @@ class SetupScan:
         """
         openPars = open(filename)
         self.InPars = json.load(openPars)
+        self.PI = self.InPars["pi"]
+        self.zurich = self.InPars["zurich"]
         
         
     def setup_1D_PI(self):
@@ -57,21 +59,15 @@ class SetupScan:
             scanedges = self.input_new_scan_edges(scanedges,axisedges) 
         return scanedges
         
-    def evaluate_target_positions(self,scanedges,stepsize,first = False):
+    def evaluate_target_positions(self,scanedges,stepsize):
         """ Evaluate the partition of the target points for a 1D scan   
         """ 
         # calculate targets points
         Npoints = int((scanedges[1]-scanedges[0])/stepsize) + 1
         if self.PI["motion_direction"] == "FRWD":
-            if first:
-                return scanedges[0]
-            else:
-                np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
+            return np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
         else:
-            if first:
-                return scanedges[1]
-            else:
-                return np.linspace(scanedges[1],scanedges[0],Npoints,endpoint=  True)
+            return np.linspace(scanedges[1],scanedges[0],Npoints,endpoint=  True)
         
     def setup_lockin(self):
         """ perform all the procedures for setting up properly the lock in: input signals, oscillator, demodulator""" 
