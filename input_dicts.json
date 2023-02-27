@@ -1,16 +1,20 @@
-{
+{	"scan_pars" :
+		{			
+			"type": "continous",
+			"dim" : 1,
+			"scan_edges": [0,11],
+            "stepsize" : 0.1,
+			"scan_edges_servo": [0,11],
+            "stepsize_servo" : 0.1,
+			"velocity" : 10
+		},
 	"pi" : 
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
-            "refmode_master": "FNL",
+            "refmode": "FNL",
 			"refmode_servo": "FNL",
             "motion_direction":"FRWD",
-			"master_scan_edges": [5,5.5],
-			"servo_scan_edges": [5,5.5],
-            "master_stepsize" : 0.01, 
-			"servo_stepsize" : 0.01,
-			"trig_type_master" : 6,
-			"trig_type_servo" : 6
+			"velocity" : 10
 		},   
 	"zurich" : 
 		{ 
@@ -53,8 +57,8 @@
 			"endless" : 0,
 			"save/filename": "Name_of_your_file",
 			"save/fileformat": "csv",
-			"save/saveonread" :1,
-			"save/save" : 1,
+			"save/saveonread" :0,
+			"save/save" : 0,
 			"type" : 6,
 			"edge" : 1, 
 			"delay" : 0,
