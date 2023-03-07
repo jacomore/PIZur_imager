@@ -11,8 +11,8 @@ def init1D():
     return ln,
 
 def init2D():
-    im.set(animated = True,clim = (0,AMP),cmap = 'magma', interpolation = None)
-    return im,
+    ax.set(animated = True,clim = (0,3))
+
 
 def update1D(data):
     """Update frame for plotting"""
@@ -22,15 +22,15 @@ def update1D(data):
     return ln,
 
 def update2D(data):
-    out_val = np.empty(())
+    print(len(data[0][0]))
     idx = data[1]
     if idx % 2 == 0:
         linedat = data[0][0]
     else:
         linedat = np.flip(data[0][0])
     matrix[idx,:] = linedat
-    im.set_data(matrix)
-    return im,
+    print(matrix[:,:10])
+    ax.imshow(matrix, cmap = 'viridis', vmin = 0, vmax = 1,interpolation='nearest')
 
 if __name__ == "__main__":   
     if dim ==  1:
@@ -43,17 +43,19 @@ if __name__ == "__main__":
     
     else:
             # setup instruments 
-        scanner = Scan_2D()
-        scanner.execute_continous_2D_scan()
+            """
+
         fig, ax = plt.subplots()
         X_MIN , X_MAX = 0,4
         Y_MIN , Y_MAX = 0,11
-        DIMX =  111
+        DIMX =  200
         DIMY = 200
         AMP = 3
-        all_matrix = []
         matrix = np.zeros((DIMX,DIMY))
-        im = plt.imshow(matrix)
-        ani = FuncAnimation(fig, update2D, frames = scanner.execute_continous_2D_scan(), init_func = init2D, interval = 100,blit=True,cache_frame_data = True)
+        ani = FuncAnimation(fig, update2D, frames = scanner.execute_continous_2D_scan(), interval = 100)
         plt.show()
+        """
+            scanner = Scan_2D()
+            scanner.execute_continous_2D_scan()
+            
         

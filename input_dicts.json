@@ -2,11 +2,11 @@
 		{			
 			"type": "continous",
 			"dim" : 2,
-			"scan_edges": [0,4],
+			"scan_edges": [12.7,32.7],
             "stepsize" : 0.1,
-			"scan_edges_servo": [0,11],
-            "stepsize_servo" : 0.1,
-			"velocity" : 10
+			"scan_edges_servo": [0,100],
+            "stepsize_servo" : 2,
+			"velocity" : 4
 		},
 	"pi" : 
 		{	"ID":"C-663",
@@ -14,7 +14,7 @@
             "refmode": "FNL",
 			"refmode_servo": "FNL",
             "motion_direction":"FRWD",
-			"velocity" : 3
+			"velocity" : 4
 		},   
 	"zurich" : 
 		{ 
@@ -51,14 +51,14 @@
 			"duration" : 0.05,
 			"historyLength" : 10000000000,
 			"device": "dev4910",
-			"grid/mode" : 2,
+			"grid/mode" : 1,
 			"grid/overwrite" : 1,
 			"grid/repetitions":1,
 			"endless" : 0,
-			"save/filename": "Name_of_your_file",
+			"save/filename": "test1",
 			"save/fileformat": "csv",
-			"save/saveonread" :0,
-			"save/save" : 0,
+			"save/saveonread" :1,
+			"save/save" : 1,
 			"type" : 6,
 			"edge" : 1, 
 			"delay" : 0,

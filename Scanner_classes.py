@@ -6,6 +6,7 @@ import numpy as np
 from Setup_commands import SetupScan
 from math import isclose
 from time import sleep
+import csv
 
 class Scan1D:
     """Scan designed to perform 1D scan"""
@@ -27,13 +28,13 @@ class Scan1D:
 
 
         # setup zhinst_lockin     
-        self.setscan.setup_lockin()
+       # self.setscan.setup_lockin()
         
         # setup data_acquisition
-        self.setscan.setup_data_acquisition()
+       # self.setscan.setup_data_acquisition()
         
         # signal subscrition
-        self.setscan.subscribe_paths()
+       # self.setscan.subscribe_paths()
         
     def setup_1D_PI(self):
         """ perform all the procedures for setting up properly the PI device""" 
@@ -166,13 +167,13 @@ class Scan_2D:
         self.srv_targets = self.setscan.evaluate_target_positions(self.srv_scan_edges,self.srv_stepsize)
         print(self.srv_targets)
         # setup zhinst_lockin     
-        self.setscan.setup_lockin()
+#        self.setscan.setup_lockin()
         
         # setup data_acquisition
-        self.setscan.setup_data_acquisition()
+#        self.setscan.setup_data_acquisition()
         
         # signal subscrition
-        self.setscan.subscribe_paths()
+#       self.setscan.subscribe_paths()
 
     def setup_2D_PI(self):
         """ perform all the procedures for setting up properly the PI device""" 
@@ -221,9 +222,9 @@ class Scan_2D:
     
     def new_col_pixel(self,idx,col):
         """move to a new position with the master axis. Here, it calculates the value of the intensity and process it (average)"""
-        raw_data = self.daqmod.read(True)
+      #  raw_data = self.daqmod.read(True)
         self.chain.master.move_stage_to_target(col)
-        return self.process_raw_data(raw_data,idx)
+      #  return self.process_raw_data(raw_data,idx)
         
     def execute_discrete_2D_scan(self):
         """execute the two 2D discrete scan"""
@@ -255,20 +256,25 @@ class Scan_2D:
                 print("loop exit on row!")
 
     def execute_continous_2D_scan(self):
-        zvalues = []    # matrix that'll be filled with acquired data
-        col_idx, col = 0, self.scan_edges[0] # column index is initially zero
-
-        self.setup_2D_scan()
-
+       # self.setup_2D_scan()
+        # with open("test1.txt",mode = 'w',newline = '') as file:
+         #   writer  = csv.writer(file)
+        self.chain.master.move_stage_to_target(self.targets[0])
+        self.chain.servo.move_stage_to_target(self.srv_targets[0])
+        # activate trigger signals
+        self.chain.configure_both_trig(trigger_types=[6,6])
         for row_idx,row in enumerate(self.srv_targets):
-            if not self.daqmod.finished():
-                self.chain.servo.move_stage_to_target(row)               
-                if row_idx%2 == 0:
-                    val = self.new_col_pixel(row_idx+1,self.targets[-1])
-                else:
-                    val = self.new_col_pixel(row_idx+1,self.targets[0])
-                sleep(0.1)
-                yield val, row_idx
+            print(row_idx)
+           # if not self.daqmod.finished():
+            self.chain.servo.move_stage_to_target(row)               
+            if row_idx%2 == 0:
+                self.new_col_pixel(row_idx+1,self.targets[-1])
+            else:
+                self.new_col_pixel(row_idx+1,self.targets[0])
+               # sleep(0.1)
+               # str_val = [str(element) for element in val]
+        #           writer.writerow(str_val)
+                #yield (val, row_idx)
 
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
