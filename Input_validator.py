@@ -1,4 +1,4 @@
-def input_new_scan_edges(self,scanedges,axisedges):
+def input_new_scan_edges(scanedges,axisedges):
     """Asks for and returns new edges for the 1D scan
     """ 
     print(f"Invalid input: desired scan range [{scanedges[0]},{scanedges[1]}] is not within axis range: [{axisedges[0]},{axisedges[1]}]")
@@ -13,7 +13,7 @@ def input_new_scan_edges(self,scanedges,axisedges):
             print("That was no valid number!")
     return new_scanedges
 
-def target_within_axis_edges(self,scanedges,axisedges):
+def target_within_axis_edges(scanedges,axisedges):
     """
     Sorts values of scanedges and, is they are not comprised in axis_edges,
     invokes input_new_edges to get new edges
@@ -24,5 +24,5 @@ def target_within_axis_edges(self,scanedges,axisedges):
     """ 
     scanedges.sort()
     while (scanedges[0] < axisedges[0] or scanedges[1] > axisedges[1]):
-        scanedges = self.input_new_scan_edges(scanedges,axisedges) 
+        scanedges = input_new_scan_edges(scanedges,axisedges) 
     return scanedges

@@ -1,13 +1,13 @@
 {	"scan_pars" :
 		{			
 			"type": "continous",
-			"main_axis" : "master",
-			"dim" : 2,
-			"scan_edges": [12.7,32.7],
-            "stepsize" : 0.1,
-			"scan_edges_servo": [0,100],
-            "stepsize_servo" : 2,
-			"velocity" : 4
+			"main_axis" : "servo",
+			"dim" : 1,
+			"scan_edges": [10,13000],
+            "stepsize" : 1,
+			"scan_edges_servo": [0,10],
+            "stepsize_servo" : 1,
+			"velocity" : 10
 		},
 	"pi" : 
 		{	"ID":"C-663",
@@ -15,7 +15,7 @@
             "refmode": "FNL",
 			"refmode_servo": "FNL",
             "motion_direction":"FRWD",
-			"velocity" : 4
+			"velocity" : 10
 		},   
 	"zurich" : 
 		{ 

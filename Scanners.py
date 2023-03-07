@@ -3,7 +3,7 @@ import numpy as np
 import Input_validator as inval
 import json
 
-class Scanner:
+class Scan1D:
     """Scan designed to perform 1D scan"""
     def __init__(self):    
         # input parameters as dictionary from json file
@@ -35,11 +35,11 @@ class Scanner:
         """ Evaluate the partition of the target points for a 1D scan   
         """ 
         # calculate targets points
-        Npoints = int((self.scanedges[1]-self.scanedges[0])/self.stepsize) + 1
+        Npoints = int((self.scan_edges[1]-self.scan_edges[0])/self.stepsize) + 1
         if self.PI["motion_direction"] == "FRWD":
-            self.targets =  np.linspace(self.scanedges[0],self.scanedges[1],Npoints,endpoint=  True)
+            self.targets =  np.linspace(self.scan_edges[0],self.scan_edges[1],Npoints,endpoint=  True)
         else:
-            self.targets = np.linspace(self.scanedges[1],self.scanedges[0],Npoints,endpoint=  True)
+            self.targets = np.linspace(self.scan_edges[1],self.scan_edges[0],Npoints,endpoint=  True)
 
     def perform_calibration_step(self):
         """evaluate the calibration step to perform with the master controller"""
@@ -50,6 +50,7 @@ class Scanner:
         """ Setup the 1D scan by: (1) moving the axis on all the targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         """
+        self.master.move_stage_to_ref(self.PI["refmode"])
         self.master.move_stage_to_target(self.targets[0])
         self.master.configure_out_trigger(trigger_type=6)
 
@@ -70,7 +71,7 @@ class Scanner:
         self.setup_1D_scan()
         self.master.move_stage_to_target(self.targets[-1])        
         
-class Scan_2D:
+class Scan2D:
     """
     Scan2D is designed to control two PI controller and the Zurich lock-in
         with the aim of perfoming a two dimensional scan along the desired axis (x or y). 
@@ -131,6 +132,8 @@ class Scan_2D:
             (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         """
         # move to first target position
+        self.chain.master.move_stage_to_ref(self.PI["refmode"])
+        self.chain.servo.move_stage_to_ref(self.PI["refmode_servo"])
         self.chain.master.move_stage_to_target(self.targets[0])
         self.chain.servo.move_stage_to_target(self.srv_targets[0])
         # activate trigger signals
@@ -143,16 +146,24 @@ class Scan_2D:
         self.perform_calibration_step()
 
         if self.scan_pars["main_axis"] == "master":
-            for row in self.srv_targets:
-                self.chain.servo.move_stage_to_target(row)              
-                for col in self.targets:
-                    self.chain.master.move_stage_to_ref(col)                        
+            for idx_row,row in enumerate(self.srv_targets):
+                self.chain.servo.move_stage_to_target(row)
+                if (idx_row%2 == 0):
+                    columns = self.targets
+                else:
+                    columns = np.copy(np.flip(self.targets))              
+                for col in columns:
+                    self.chain.master.move_stage_to_target(col)                        
 
         elif self.scan_pars["main_axis"] == "servo":
-            for col in self.targets:
-                self.chain.master.move_stage_to_target(col)              
-                for row in self.srv_targets:
-                    self.chain.servo.move_stage_to_ref(row)    
+            for idx_col,col in enumerate(self.targets):
+                self.chain.master.move_stage_to_target(col) 
+                if (idx_col%2 == 0):
+                    rows = self.targets
+                else:
+                    rows = np.copy(np.flip(self.targets))             
+                for row in rows:
+                    self.chain.servo.move_stage_to_target(row)    
         
     def execute_continous_2D_scan(self):
         """execute the 2D continous scan"""
