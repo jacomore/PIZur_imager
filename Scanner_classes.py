@@ -1,150 +1,280 @@
 import json
-from PI_commands import Stepper
+from PI_commands import Stepper, StepperChain
 from Zhinst_commands import zhinst_lockin
-from multiprocessing import Pipe
 from pipython import pitools
 import numpy as np
+from Setup_commands import SetupScan
 from math import isclose
+from time import sleep
+import csv
 
-class Scan1D: 
-    """ Scan1D is designed to control a single PI controller and the Zurich lock-in
-        with the aim of perfoming one dimensional scan along the desired axis (x or y). 
-    """
+class Scan1D:
+    """Scan designed to perform 1D scan"""
+    def __init__(self):
+        # common features between Scanners
+        self.setscan = SetupScan("input_dicts.json") 
+        
+        self.scan_pars = self.setscan.InPars["scan_pars"]
+        self.PI = self.setscan.InPars["pi"]
+         
+        # setup PI controller
+        self.setup_1D_PI()   
 
-    def __init__(self,filename):
-        """Unpack all the necessary parameters necessary for performing the 1D scan
-           and the analysis. Parameters are then instantiated in the instruments by using
-           the respective classes. Eventually, 1D is performed.
+        # check input scan edges validity
+        self.axis_edges = self.master.evaluate_axis_edges()
+        self.scan_edges = self.setscan.target_within_axis_edges(self.scan_pars["scan_edges"],self.axis_edges)
+        self.stepsize = self.scan_pars["stepsize"]
+        self.targets = self.setscan.evaluate_target_positions(self.scan_edges,self.stepsize)
 
-           Arguments
-           -------
-           filename (str) : name of the file (+ extension) containing all the input data
-        """
-        openPars = open(filename)
-        self.InPars = json.load(openPars)
-        self.PI , self.zurich = self.InPars["pi"], self.InPars["zurich"]
-        # connect and instantiate the pi device 
-        self.setup_PI()
-        # connect and instantiate lock-in: input signals, demodulator, oscillator
-        self.setup_lockin()
-        # connect and instantiate the data acquisition of the zhinst
-        self.setup_data_acquisition()
-        # verify correctness of the input parameters
-        self.target_within_axis_edges()
 
-    def setup_PI(self):
+        # setup zhinst_lockin     
+       # self.setscan.setup_lockin()
+        
+        # setup data_acquisition
+       # self.setscan.setup_data_acquisition()
+        
+        # signal subscrition
+       # self.setscan.subscribe_paths()
+        
+    def setup_1D_PI(self):
         """ perform all the procedures for setting up properly the PI device""" 
         self.master = Stepper(self.PI["ID"],self.PI["stage_ID"]) # correct here and place only self.PI as below, more compact
         self.master.connect_pidevice()
-        self.master.move_stage_to_ref(self.PI["refmode"])
-        self.master.configure_out_trig(type = self.PI["trig_type"])
-
-    def setup_lockin(self):
-        """ perform all the procedures for setting up properly the lock in: input signals, oscillator, demodulator""" 
-        self.input_sig_pars,  osc_pars = self.InPars["input_signal_pars"] , self.InPars["oscillator_pars"]
-        self.demod_pars = self.InPars["demod_pars"]
-        self.lockin = zhinst_lockin(self.zurich) 
-        self.lockin.input_signal_settings(self.input_sig_pars)
-        self.lockin.oscillator_settings(osc_pars)
-        self.lockin.demod_signal_settings(self.demod_pars)
-    
-    def setup_data_acquisition(self):
-        """ perform all the procedures for setting up properly the PI device"""
-        data_acquisition_pars = self.InPars["data_acquisition_pars"] 
-        self.complete_daq_pars = self.lockin.join_data_acquisition_pars(
-                                                                        data_acquisition_pars,
-                                                                        self.demod_pars,
-                                                                        self.PI
-                                                                        )
-        self.lockin.data_acquisition_settings(self.complete_daq_pars)
-        demod_path = f"/{self.zurich['device_id']}/demods/{self.demod_pars['trigger_demod_index']}/sample"
-        self.signal_paths = []
-        self.signal_paths.append(demod_path + ".R.avg") # this should be made an input!
-        #signal_paths.append(demod_path + ".Theta.avg")  # this should be made an input!
-        self.signal_paths.append(self.complete_daq_pars["triggernode"])  
-        self.lockin.subscribe_to_signals(self.signal_paths)
-
-    def input_new_scan_edges(self):
-        """Asks for and returns new edges for the 1D scan
-        
-        Parameters
-        ----------
-        axis_edges : list
-            Two float elements with the physical edges of the axes
-        """ 
-        print(f"Invalid input: desired scan range [{self.scan_edges[0]},{self.scan_edges[1]}] is not within axis range: [{self.axis_edges[0]},{self.axis_edges[1]}]")
-        while True: 
-            try:
-                neg = float(input("Please, type a new value for the negative edge: "))
-                pos = float(input("Please, type a new value for the positive edge: "))
-                break
-            except ValueError:
-                print("That was no valid number!")
-        self.scan_edges_edges = [neg,pos]
-
-    def target_within_axis_edges(self):
-        """
-        Sorts values of scan_edges and, is they are not comprised in axis_edges,
-        invokes input_new_edges to get new edges
-        """ 
-        self.scan_edges = self.PI["scan_edges"]
-        print("Input scan edges are: ",self.scan_edges)
-        self.axis_edges = self.master.axis_edges()
-        self.scan_edges.sort()
-        if (self.scan_edges[0] < self.axis_edges[0] or self.scan_edges[1] > self.axis_edges[1]):
-            self.input_new_scan_edges(self.scan_edges,self.axis_edges) 
-            self.target_within_axis_edges(self.scan_edges,self.axis_edges)
-
-    def evaluate_target_positions(self):
-        """ Evaluate the partition of the target points for a 1D scan   
-        """ 
-        Npoints = int((self.scan_edges[1]-self.scan_edges[0])/self.PI["stepsize"]) + 1
-        if self.PI["motion_direction"] == "FRWD":
-            self.targets = np.linspace(self.scan_edges[0],self.scan_edges[1],Npoints,endpoint=  True)
-        elif self.PI["motion_direction"] == "BCWD":
-            self.targets = np.linspace(self.scan_edges[1],self.scan_edges[0],Npoints,endpoint=  True)
-
-    def evaluate_first_target_distance(self):
-        """evaluate the first target of the scan (first_target) and the reference target (ref_target)
-        """
-        # evaluate first target 
-        if self.PI["motion_direction"] == "FRWD":
-            first_target = self.scan_edges[0]
-        elif self.PI["motion_direction"] == "BCWD":
-            first_target = self.scan_edges[1]
-        # evaluate current position
-        if self.PI["refmode"] == "FNL":
-            ref_target = self.axis_edges[0]
-        if self.PI["refmode"] == "FPL":
-            ref_target = self.axis_edges[1]
-
-        return first_target, ref_target        
+        self.master.set_velocity(self.PI["velocity"])
+        #self.master.move_stage_to_ref(self.PI["refmode"])       
         
     def evaluate_calibration_steps(self):
-        """evaluate the two intermediate step before the start of the real scan procedure for loading 
-           all the parameter into the ROM of the zurich 
-        """
-        first_target, ref_target = self.evaluate_first_target_distance()
-        delta_x = first_target - ref_target
-        stepsize = self.PI["stepsize"]
-        if isclose(delta_x,0.,abs_tol=1e-4):   # reference point is the same as the starting point of the scan
-            return [abs(ref_target - 2*stepsize),abs(ref_target - stepsize)]
-        elif delta_x > 0:                      # negative reference, point is in a forward position
-            return [delta_x/3.0 , 2.*delta_x/3.]
-        elif delta_x < 0: 
-            return [ref_target + delta_x/3. , ref_target + 2*delta_x/3.]
+        """evaluate the calibration step to perform with the master controller"""
+      #  assert isclose(self.master.get_curr_pos(),self.targets[0],abs_tol=1e-3)
+        if self.scan_pars["type"] == "discrete":
+            return [abs(self.targets[0] - 2*self.stepsize),abs(self.targets[0] - self.stepsize)]
+        else: 
+            return [self.targets[-1],self.targets[0]]
 
     def execute_calibration_steps(self):
         """execute the two intermediate step before the start of the real scan procedure for loading 
            all the parameter into the ROM of the zurich 
         """
         calibration_steps = self.evaluate_calibration_steps()
+        print(calibration_steps)
         for target in calibration_steps:
-            raw_data = self.lockin.daq_module.read(True)
-            self.master.pidevice.MOV(self.master.pidevice.axes,target)
-            pitools.waitontarget(self.self.master.pidevice)
-            print(raw_data)
-            print(target)
+            self.daqmod.read(True)
+            self.master.move_stage_to_target(target)
+            print(self.setscan.lockin.daq_module.finished())
+            print(self.setscan.lockin.daq_module.progress())
+            sleep(0.1)
+
+
+    def setup_1D_scan(self):
+        """ Setup the 1D scan by: (1) moving the axis on all the targets positions, 
+            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
+        """
+                # rename data_acquisition for readability
+        self.daqmod = self.setscan.lockin.daq_module
+        self.master.move_stage_to_target(self.targets[0])
+        self.master.configure_out_trigger(trigger_type=6)
+        self.daqmod.execute()
+        self.execute_calibration_steps()
+        
+    def execute_discrete_1D_scan(self):
+        """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
+            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
+        """
+        xdata, ydata = [], []
+        print(self.targets)
+        self.setup_1D_scan()
+        for idx,target in enumerate(self.targets):
+            if not  self.daqmod.finished():
+                raw_data = self.daqmod.read(True)
+                self.master.move_stage_to_target(target)        
+                print("Progress:",np.floor(self.daqmod.progress())*100,"%")
+                yval = self.process_raw_data(raw_data,idx)
+                sleep(0.1)
+                
+                if yval != []:
+                    xdata.append(target)
+                    ydata.append(np.mean(yval))
+                    print("Position:",target,"Value: ",np.mean(yval))
+                    yield ydata,xdata
+                print("----------------")
+            else:   
+                print("Scan is finished")
+    
+    def execute_continous_1D_scan(self):
+        """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
+            (2) measuring the raw_data from the Zurich lock-in (3) moving continously
+        """
+        xdata = np.linspace(self.targets[0],self.targets[-1],self.setscan.lockin.num_cols)
+        self.setup_1D_scan()
+        print(self.setscan.lockin.daq_module.finished())
+        print(self.setscan.lockin.daq_module.progress())
+
+        raw_data = self.daqmod.read(True)
+        self.master.move_stage_to_target(self.targets[-1])
+        sleep(0.1)
+        ydata = self.process_raw_data(raw_data,0)
+        print(ydata,xdata)
+        yield ydata,xdata
+        
+    def process_raw_data(self,raw_data,index):
+        """Gets and process raw_rata and updates data value
+
+        Parameters
+        ----------
+        raw_data : dict
+            dictionary in which read data are stored
+        index : int
+            number that contains the number of step of the scan so far
+
+        Returns
+        -------
+        average value 
+        """
+        demod_values = []
+        for signal_path in self.setscan.signal_paths:
+            for signal_burst in raw_data.get(signal_path.lower(),[]):
+                demod_values.append(signal_burst["value"][index,:])
+
+        return demod_values
+        
+        
+class Scan_2D:
+    """
+    Scan2D is designed to control two PI controller and the Zurich lock-in
+        with the aim of perfoming a two dimensional scan along the desired axis (x or y). 
+    """
+    def __init__(self):
+        # common features between Scanners
+        self.setscan = SetupScan("input_dicts.json") 
+        
+        self.scan_pars = self.setscan.InPars["scan_pars"]
+        self.PI = self.setscan.InPars["pi"]
+  
+        
+        # setup PI controller
+        self.setup_2D_PI()   
+
+        # check input scan edges validity
+        self.axis_edges = self.chain.master.evaluate_axis_edges()
+        self.scan_edges = self.setscan.target_within_axis_edges(self.scan_pars["scan_edges"],self.axis_edges)
+        self.stepsize = self.scan_pars["stepsize"]
+        self.targets = self.setscan.evaluate_target_positions(self.scan_edges,self.stepsize)
+        
+        # same for servo --> explicitely write that is for servo
+        self.srv_axis_edges = self.chain.servo.evaluate_axis_edges()
+        self.srv_scan_edges = self.setscan.target_within_axis_edges(self.scan_pars["scan_edges_servo"],self.srv_axis_edges)
+        self.srv_stepsize = self.scan_pars["stepsize_servo"]
+        self.srv_targets = self.setscan.evaluate_target_positions(self.srv_scan_edges,self.srv_stepsize)
+        print(self.srv_targets)
+        # setup zhinst_lockin     
+#        self.setscan.setup_lockin()
+        
+        # setup data_acquisition
+#        self.setscan.setup_data_acquisition()
+        
+        # signal subscrition
+#       self.setscan.subscribe_paths()
+
+    def setup_2D_PI(self):
+        """ perform all the procedures for setting up properly the PI device""" 
+        self.chain = StepperChain(self.PI["ID"],self.PI["stage_ID"]) # correct here and place only self.PI as below, more compact
+        self.chain.connect_daisy([1,2])
+        self.chain.master.set_velocity(self.PI["velocity"])
+        self.chain.reference_both_stages(ref_modes=["FNL","FNL"])
+    
+    def evaluate_calibration_steps(self):
+        """evaluate the calibration step to perform with the servo controller"""
+#        assert isclose(self.chain.servo.get_curr_pos(),self.srv_targets[0],abs_tol=1e-3)
+        if self.scan_pars["type"] == "discrete":
+            return [abs(self.srv_targets[0] - 2*self.srv_stepsize),abs(self.srv_targets[0] - self.srv_stepsize)]
+        else: 
+            return [self.targets[-1],self.targets[0]]
+        
+    def execute_calibration_steps(self):
+        """execute the two intermediate step before the start of the real scan procedure for loading 
+           all the parameter into the ROM of the zurich 
+        """
+        calibration_steps = self.evaluate_calibration_steps()
+              # rename data_acquisition for readability
+        for target in calibration_steps:
+            raw_data = self.daqmod.read(True)
+            self.chain.master.move_stage_to_target(target)   # execute the calibration step with the servo controller
+
+    def setup_2D_scan(self):
+        """ Setup the 2D scan by: (1) moving the axis on all the first targets positions, 
+            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
+        """
+        # move to first target position
+        self.daqmod = self.setscan.lockin.daq_module
+        self.chain.master.move_stage_to_target(self.targets[0])
+        self.chain.servo.move_stage_to_target(self.srv_targets[0])
+        # activate trigger signals
+        self.chain.configure_both_trig(trigger_types=[6,6])
+        self.daqmod.execute()
+        self.execute_calibration_steps()
+        
+    def new_row_pixel(self,idx,row):
+        """move to a new position with the servo axis. Here, it calculates the value of the intensity and process it (average)"""
+        raw_data = self.daqmod.read(True)
+        self.chain.servo.move_stage_to_target(row)
+        val = self.process_raw_data(raw_data,idx)
+        return np.mean(val)
+    
+    def new_col_pixel(self,idx,col):
+        """move to a new position with the master axis. Here, it calculates the value of the intensity and process it (average)"""
+      #  raw_data = self.daqmod.read(True)
+        self.chain.master.move_stage_to_target(col)
+      #  return self.process_raw_data(raw_data,idx)
+        
+    def execute_discrete_2D_scan(self):
+        """execute the two 2D discrete scan"""
+        zvalues = []    # matrix that'll be filled with acquired data
+        col_idx, col = 0, self.scan_edges[0] # column index is initially zero
+
+        self.setup_2D_scan()
+    
+        for row_idx,row in self.srv_targets:
+            if not self.daqmod.finished():
+                idx = (row_idx + 1)*(col_idx + 1)
+                val = self.new_row_pixel(idx,row)
+                while val != []:
+                    sleep(0.01)
+                zvalues.append(val)
+                yield zvalues
+                
+                for col_idx,col in self.targets:
+                    if not self.daqmod.finished():
+                        idx = (row_idx + 1)*(col_idx + 1)   
+                        val = self.new_col_pixel(idx,col)
+                        
+                        if val != []:
+                            zvalues.append(val)
+                        yield zvalues
+                    else: 
+                        print("Loop exit on column!")
+            else:
+                print("loop exit on row!")
+
+    def execute_continous_2D_scan(self):
+       # self.setup_2D_scan()
+        # with open("test1.txt",mode = 'w',newline = '') as file:
+         #   writer  = csv.writer(file)
+        self.chain.master.move_stage_to_target(self.targets[0])
+        self.chain.servo.move_stage_to_target(self.srv_targets[0])
+        # activate trigger signals
+        self.chain.configure_both_trig(trigger_types=[6,6])
+        for row_idx,row in enumerate(self.srv_targets):
+            print(row_idx)
+           # if not self.daqmod.finished():
+            self.chain.servo.move_stage_to_target(row)               
+            if row_idx%2 == 0:
+                self.new_col_pixel(row_idx+1,self.targets[-1])
+            else:
+                self.new_col_pixel(row_idx+1,self.targets[0])
+               # sleep(0.1)
+               # str_val = [str(element) for element in val]
+        #           writer.writerow(str_val)
+                #yield (val, row_idx)
 
     def process_raw_data(self,raw_data,index):
         """Gets and process raw_rata and updates data value
@@ -153,15 +283,16 @@ class Scan1D:
         ----------
         raw_data : dict
             dictionary in which read data are stored
-        print_cols : index
-            index : int
+        index : int
             number that contains the number of step of the scan so far
 
         Returns
         -------
         average value 
         """
-        for signal_path in self.signal_paths:
+        demod_values = []
+        for signal_path in self.setscan.signal_paths:
             for signal_burst in raw_data.get(signal_path.lower(),[]):
-                value = signal_burst["value"][index,:]
-                return np.mean(value)
+                demod_values.append(signal_burst["value"][index,:])
+
+        return demod_values
