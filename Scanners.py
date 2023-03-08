@@ -1,14 +1,10 @@
 from PI_commands import Stepper, StepperChain
 import numpy as np
 import Input_validator as inval
-import json
 
 class Scan1D:
     """Scan designed to perform 1D scan"""
-    def __init__(self):    
-        # input parameters as set of dictionaries from json file
-        openPars = open('input_dicts.json')
-        InPars = json.load(openPars)
+    def __init__(self,InPars):    
         self.PI = InPars["pi"]        
         self.scan_pars = InPars["scan_pars"]
 
@@ -37,10 +33,7 @@ class Scan1D:
         """ 
         # calculate targets points
         Npoints = int((self.scan_edges[1]-self.scan_edges[0])/self.stepsize) + 1
-        if self.PI["motion_direction"] == "FRWD":
-            self.targets =  np.linspace(self.scan_edges[0],self.scan_edges[1],Npoints,endpoint=  True)
-        else:
-            self.targets = np.linspace(self.scan_edges[1],self.scan_edges[0],Npoints,endpoint=  True)
+        self.targets =  np.linspace(self.scan_edges[0],self.scan_edges[1],Npoints,endpoint=  True)
 
     def execute_calibration_step(self):
         """evaluate the calibration step to perform with the master controller"""
@@ -114,11 +107,8 @@ class Scan2D:
         """ 
         # calculate targets points
         Npoints = int((scanedges[1]-scanedges[0])/stepsize) + 1
-        if self.PI["motion_direction"] == "FRWD":
-            return np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
-        else:
-            return np.linspace(scanedges[1],scanedges[0],Npoints,endpoint=  True)
-        
+        return np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
+                
     def execute_calibration_step(self):
         """evaluate the calibration step to perform with the either the servo or the master controller"""
         if self.scan_pars["main_axis"] == "master":

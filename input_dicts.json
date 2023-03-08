@@ -2,10 +2,10 @@
 		{			
 			"type": "discrete",
 			"main_axis" : "master",
-			"dim" : 2,
-			"scan_edges": [14.4,34.4],
-            "stepsize" : 0.1,
-			"velocity" : 4,
+			"dim" : 1,
+			"scan_edges": [20.7,21.3],
+            "stepsize" : 0.001,
+			"velocity" : 10,
 			"acceleration" : 20,
 			"scan_edges_servo": [0,100],
             "stepsize_servo" : 2,
@@ -15,26 +15,8 @@
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
             "refmode": "FNL",
-			"refmode_servo": "FNL",
-            "motion_direction":"FRWD"
-		},   
-	"data_acquisition_pars":
-		{	
-			"historyLength" : 10000000000,
-			"device": "dev4910",
-			"grid/mode" : 1,
-			"grid/overwrite" : 1,
-			"grid/repetitions":1,
-			"endless" : 0,
-			"save/filename": "test1",
-			"save/fileformat": "csv",
-			"save/saveonread" :1,
-			"save/save" : 1,
-			"type" : 6,
-			"edge" : 1, 
-			"delay" : 0,
-			"holdoff/count" : 0
-		}		
+			"refmode_servo": "FNL"
+		}
 }
 			
 	
