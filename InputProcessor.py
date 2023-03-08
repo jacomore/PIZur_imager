@@ -1,6 +1,7 @@
 import numpy as np
 
 class InputProcessor():
+    """Return values to be provided to the Zurich lockin """
     def __init__(self,scan_pars,sampling_rate):
         self.scan_pars = scan_pars
         self.s_rate = sampling_rate
@@ -21,13 +22,15 @@ class InputProcessor():
             N_rows = 1
             duration = self.duration_calculator(acc,delta,vel)
             daq_pars =  {
-                        "columns" : N_cols,
-                        "rows" : N_rows,
+                        "daq_columns" : N_cols,
+                        "daq_rows" : N_rows,
                         "duration" : duration,
                         "mode" : "Linear",
                         "trigger type" : "HW trigger",
                         "trigger edge" : "positive",
-                        "holdoff" : duration*(0.95)
+                        "holdoff" : duration*(0.95),
+                        "out_columns" : N_cols,
+                        "out_rows" : N_rows
                         }
             
         else:
@@ -36,13 +39,15 @@ class InputProcessor():
             duration = 0.05
             N_cols = int(np.floor(duration* self.s_rate))
             daq_pars =  {
-                        "columns" : N_cols,
-                        "rows" : N_rows,
+                        "daq_columns" : N_cols,
+                        "daq_rows" : N_rows,
                         "duration" : duration,
                         "mode" : "Exact (on-grid)",
                         "trigger type" : "HW trigger",
                         "trigger edge" : "negative",
-                        "holdoff" : duration*(0.95)
+                        "holdoff" : duration*(0.95),
+                        "out_columns" : N_cols,
+                        "out_rows" : N_rows
                         }
         return daq_pars
     
@@ -67,7 +72,7 @@ class InputProcessor():
         if self.scan_pars["type"] == "continous":
             if self.scan_pars["main_axis"] == "master":
                 N_rows = int(np.floor(srv_delta/srv_stepsize)) + 1
-                N_cols = int(np.floor(delta/stepsize)) + 1
+                N_cols = int(np.floor(delta/stepsize)) + 1 
                 duration = self.duration_calculator(acc,delta,vel)
             
             else:
@@ -76,17 +81,26 @@ class InputProcessor():
                 duration = self.duration_calculator(acc,srv_delta,srv_vel)
             
             daq_pars =  {
-                        "columns" : N_cols,
-                        "rows" : N_rows,
+                        "daq_columns" : N_cols,
+                        "daq_rows" : N_rows,
                         "duration" : duration,
                         "mode" : "Linear",
                         "trigger type" : "HW trigger",
                         "trigger edge" : "positive",
-                        "holdoff" : duration*(0.95)
+                        "holdoff" : duration*(0.95),
+                        "out_columns" : N_cols,
+                        "out_rows" : N_rows
                         }
 
         else:
-            N_rows = (int(np.floor(delta/stepsize)) + 1)*(int(np.floor(srv_delta/srv_stepsize)) + 1)
+            if self.scan_pars["main_axis"] == "master":
+                out_rows = int(np.floor(srv_delta/srv_stepsize)) + 1
+                out_cols = int(np.floor(delta/stepsize)) + 1             
+            else:
+                out_rows = int(np.floor(delta/stepsize)) + 1
+                out_cols = int(np.floor(srv_delta/srv_stepsize)) + 1
+                            
+            N_rows = out_rows * out_cols
             duration = 0.05
             N_cols = int(np.floor(duration* self.s_rate))
             daq_pars =  {
@@ -96,9 +110,10 @@ class InputProcessor():
                         "mode" : "Exact (on-grid)",
                         "trigger type" : "HW trigger",
                         "trigger edge" : "negative",
-                        "holdoff" : duration*(0.95)
-                        }
-
+                        "holdoff" : duration*(0.95),
+                        "out_columns" : out_cols,
+                        "out_rows" : out_rows
+            }
         return daq_pars
 
 
