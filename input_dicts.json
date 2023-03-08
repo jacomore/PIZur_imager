@@ -1,14 +1,15 @@
 {	"scan_pars" :
 		{			
-			"type": "continous",
+			"type": "discrete",
 			"main_axis" : "master",
-			"dim" : 1,
-			"scan_edges": [10,50],
-            "stepsize" : 1,
-			"velocity" : 10,
-			"scan_edges_servo": [0,10],
-            "stepsize_servo" : 1,
-			"velocity_servo" : 10
+			"dim" : 2,
+			"scan_edges": [14.4,34.4],
+            "stepsize" : 0.1,
+			"velocity" : 4,
+			"acceleration" : 20,
+			"scan_edges_servo": [0,100],
+            "stepsize_servo" : 2,
+			"velocity_servo" :4
 		},
 	"pi" : 
 		{	"ID":"C-663",
@@ -17,39 +18,8 @@
 			"refmode_servo": "FNL",
             "motion_direction":"FRWD"
 		},   
-	"zurich" : 
-		{ 
-			"device_id":"dev4910",
-            "server_host":"169.254.196.174",
-            "apilevel" : 6,
-            "server_port" : 8004
-        },
-	"input_signal_pars" : 
-		{	
-			"input_channel" : 0,
-			"ac" : 0, 
-            "imp50" : 0,
-            "range": 3.0
-        },
-	"demod_pars" :
-		{	
-			"trigger_demod_index" : 0,
-			"enable" : 1,		
-			"rate" : 10e3,
-            "adcselect" : 0,
-            "order" : 3,
-            "oscselect" : 0,
-            "harmonic" : 1,
-            "bandwidth" : 10
-        },
-	"oscillator_pars":
-		{
-			"osc_index" : 0,
-			"osc_freq" : 1e3
-		},
 	"data_acquisition_pars":
 		{	
-			"duration" : 0.05,
 			"historyLength" : 10000000000,
 			"device": "dev4910",
 			"grid/mode" : 1,
