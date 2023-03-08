@@ -1,21 +1,21 @@
 {	"scan_pars" :
 		{			
 			"type": "continous",
-			"main_axis" : "servo",
+			"main_axis" : "master",
 			"dim" : 1,
-			"scan_edges": [10,13000],
+			"scan_edges": [10,50],
             "stepsize" : 1,
+			"velocity" : 10,
 			"scan_edges_servo": [0,10],
             "stepsize_servo" : 1,
-			"velocity" : 10
+			"velocity_servo" : 10
 		},
 	"pi" : 
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
             "refmode": "FNL",
 			"refmode_servo": "FNL",
-            "motion_direction":"FRWD",
-			"velocity" : 10
+            "motion_direction":"FRWD"
 		},   
 	"zurich" : 
 		{ 

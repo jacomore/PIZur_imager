@@ -6,11 +6,11 @@ import json
 class Scan1D:
     """Scan designed to perform 1D scan"""
     def __init__(self):    
-        # input parameters as dictionary from json file
+        # input parameters as set of dictionaries from json file
         openPars = open('input_dicts.json')
-        self.InPars = json.load(openPars)
-        self.PI = self.InPars["pi"]        
-        self.scan_pars = self.InPars["scan_pars"]
+        InPars = json.load(openPars)
+        self.PI = InPars["pi"]        
+        self.scan_pars = InPars["scan_pars"]
 
         # connect 1D device
         self.connect_1D_PI()   
@@ -24,12 +24,13 @@ class Scan1D:
 
     def connect_1D_PI(self):
         """ perform all the procedures for setting up properly the PI device""" 
-        self.master = Stepper(self.PI["ID"],self.PI["stage_ID"]) # correct here and place only self.PI as below, more compact
+        self.master = Stepper(self.PI["ID"],self.PI["stage_ID"]) 
         self.master.connect_pidevice()
     
     def setup_1D_PI(self):
         """Set the parameters of interest in the ROM of the device"""
-        self.master.set_velocity(self.PI["velocity"])
+        self.master.set_velocity(self.scan_pars["velocity"])
+        # set acceleration ... and many others
 
     def evaluate_target_positions(self):
         """ Evaluate the partition of the target points for a 1D scan   
@@ -41,7 +42,7 @@ class Scan1D:
         else:
             self.targets = np.linspace(self.scan_edges[1],self.scan_edges[0],Npoints,endpoint=  True)
 
-    def perform_calibration_step(self):
+    def execute_calibration_step(self):
         """evaluate the calibration step to perform with the master controller"""
         cal_target = abs(self.targets[0] - self.stepsize)
         self.master.move_stage_to_target(cal_target) 
@@ -59,7 +60,7 @@ class Scan1D:
             (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
         """
         self.init_1D_scan()
-        self.perform_calibration_step()
+        self.execute_calibration_step()
         for target in self.targets:
             self.master.move_stage_to_target(target)        
             print("Position: ", target)
@@ -68,7 +69,7 @@ class Scan1D:
         """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) moving continously
         """
-        self.setup_1D_scan()
+        self.init_1D_scan()
         self.master.move_stage_to_target(self.targets[-1])        
         
 class Scan2D:
@@ -79,22 +80,20 @@ class Scan2D:
     def __init__(self):
          # input parameters as dictionary from json file
         openPars = open('input_dicts.json')
-        self.InPars = json.load(openPars)
-        self.PI = self.InPars["pi"]        
-        self.scan_pars = self.InPars["scan_pars"]
+        InPars = json.load(openPars)
+        self.PI = InPars["pi"]        
+        self.scan_pars = InPars["scan_pars"]
 
         # connect PI controller
         self.connect_2D_PI()
         # setup PI controller
         self.setup_2D_PI()
 
-        # check input scan edges validity
         self.axis_edges = self.chain.master.evaluate_axis_edges()
         self.scan_edges = inval.target_within_axis_edges(self.scan_pars["scan_edges"],self.axis_edges)
         self.stepsize = self.scan_pars["stepsize"]
         self.targets = self.evaluate_target_positions(self.scan_edges,self.stepsize)
 
-        # same for servo --> explicitely write that is for servo
         self.srv_axis_edges = self.chain.servo.evaluate_axis_edges()
         self.srv_scan_edges = inval.target_within_axis_edges(self.scan_pars["scan_edges_servo"],self.srv_axis_edges)
         self.srv_stepsize = self.scan_pars["stepsize_servo"]
@@ -107,7 +106,9 @@ class Scan2D:
 
     def setup_2D_PI(self):  
         self.chain.master.set_velocity(self.PI["velocity"])
-    
+        self.chain.servo.set_velocity(self.scan_pars["velocity_servo"]) # 10 mm/s is the standard velocity of the controller
+     
+       
     def evaluate_target_positions(self,scanedges,stepsize):
         """ Evaluate the partition of the target points for a 1D scan   
         """ 
@@ -118,18 +119,27 @@ class Scan2D:
         else:
             return np.linspace(scanedges[1],scanedges[0],Npoints,endpoint=  True)
         
-    def perform_calibration_step(self):
-        """evaluate the calibration step to perform with the servo controller"""
+    def execute_calibration_step(self):
+        """evaluate the calibration step to perform with the either the servo or the master controller"""
         if self.scan_pars["main_axis"] == "master":
             cal_target = abs(self.srv_targets[0] - self.srv_stepsize)
             self.chain.servo.move_stage_to_target(cal_target) 
         elif self.scan_pars["main_axis"] == "servo":
             cal_target = abs(self.targets[0] - self.stepsize)
             self.chain.master.move_stage_to_target(cal_target) 
+    
+    def set_out_trigger(self):
+        """Depending on type f scan and the main axis, set the trigger output for the controllers."""
+        if self.scan_pars["type"] == "continous":
+            if self.scan_pars["main_axis"] == "master":
+                self.chain.master.configure_out_trigger(trigger_types=6)
+            elif self.scan_pars["main_axis"] == "servo":
+                self.chain.servo.configure_out_trigger(trigger_types=6)
+        elif self.scan_pars["type"] == "discrete":
+            self.chain.configure_both_trig(trigger_types=[6,6])
 
     def init_2D_scan(self):
-        """ Setup the 2D scan by: (1) moving the axis on all the first targets positions, 
-            (2) measuring the raw_data from the Zurich lock-in (3) saving the data on read
+        """ Setup the 2D scan
         """
         # move to first target position
         self.chain.master.move_stage_to_ref(self.PI["refmode"])
@@ -137,33 +147,33 @@ class Scan2D:
         self.chain.master.move_stage_to_target(self.targets[0])
         self.chain.servo.move_stage_to_target(self.srv_targets[0])
         # activate trigger signals
-        self.chain.configure_both_trig(trigger_types=[6,6])
+        self.set_out_trigger()
     
-
     def execute_discrete_2D_scan(self):
         """execute the two 2D discrete scan"""
         self.init_2D_scan()
-        self.perform_calibration_step()
+        self.execute_calibration_step()
 
         if self.scan_pars["main_axis"] == "master":
             for idx_row,row in enumerate(self.srv_targets):
                 self.chain.servo.move_stage_to_target(row)
                 if (idx_row%2 == 0):
-                    columns = self.targets
+                    for col in self.targets:
+                        self.chain.master.move_stage_to_target(col)
                 else:
-                    columns = np.copy(np.flip(self.targets))              
-                for col in columns:
-                    self.chain.master.move_stage_to_target(col)                        
+                    for col in self.targets[::-1]:
+                        self.chain.master.move_stage_to_target(col)                        
 
         elif self.scan_pars["main_axis"] == "servo":
             for idx_col,col in enumerate(self.targets):
                 self.chain.master.move_stage_to_target(col) 
                 if (idx_col%2 == 0):
-                    rows = self.targets
+                    for row in self.srv_targets:
+                        self.chain.servo.move_stage_to_target(row)    
                 else:
-                    rows = np.copy(np.flip(self.targets))             
-                for row in rows:
-                    self.chain.servo.move_stage_to_target(row)    
+                    for row in self.srv_targets[::-1]:
+                        self.chain.servo.move_stage_to_target(row)                 
+                
         
     def execute_continous_2D_scan(self):
         """execute the 2D continous scan"""
@@ -180,7 +190,7 @@ class Scan2D:
             for col_idx,col in enumerate(self.targets):
                 self.chain.master.move_stage_to_target(col)               
                 if col_idx%2 == 0:
-                        self.chain.servo.move_stage_to_ref(self.srv_targets[-1])
+                    self.chain.servo.move_stage_to_ref(self.srv_targets[-1])
                 else:
-                        self.chain.servo.move_stage_to_ref(self.srv_targets[0])
+                    self.chain.servo.move_stage_to_ref(self.srv_targets[0])
 
