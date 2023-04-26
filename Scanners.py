@@ -70,10 +70,8 @@ class Scan2D:
     Scan2D is designed to control two PI controller and the Zurich lock-in
         with the aim of perfoming a two dimensional scan along the desired axis (x or y). 
     """
-    def __init__(self):
+    def __init__(self,InPars):
          # input parameters as dictionary from json file
-        openPars = open('input_dicts.json')
-        InPars = json.load(openPars)
         self.PI = InPars["pi"]        
         self.scan_pars = InPars["scan_pars"]
 
@@ -98,7 +96,7 @@ class Scan2D:
         self.chain.connect_daisy([1,2])
 
     def setup_2D_PI(self):  
-        self.chain.master.set_velocity(self.PI["velocity"])
+        self.chain.master.set_velocity(self.scan_pars["velocity"])
         self.chain.servo.set_velocity(self.scan_pars["velocity_servo"]) # 10 mm/s is the standard velocity of the controller
      
        
@@ -122,9 +120,9 @@ class Scan2D:
         """Depending on type f scan and the main axis, set the trigger output for the controllers."""
         if self.scan_pars["type"] == "continous":
             if self.scan_pars["main_axis"] == "master":
-                self.chain.master.configure_out_trigger(trigger_types=6)
+                self.chain.master.configure_out_trigger(trigger_type=6)
             elif self.scan_pars["main_axis"] == "servo":
-                self.chain.servo.configure_out_trigger(trigger_types=6)
+                self.chain.servo.configure_out_trigger(trigger_type=6)
         elif self.scan_pars["type"] == "discrete":
             self.chain.configure_both_trig(trigger_types=[6,6])
 
@@ -132,10 +130,12 @@ class Scan2D:
         """ Setup the 2D scan
         """
         # move to first target position
+        self.chain.master.set_velocity(10)
         self.chain.master.move_stage_to_ref(self.PI["refmode"])
         self.chain.servo.move_stage_to_ref(self.PI["refmode_servo"])
         self.chain.master.move_stage_to_target(self.targets[0])
         self.chain.servo.move_stage_to_target(self.srv_targets[0])
+        self.chain.master.set_velocity(0.5)
         # activate trigger signals
         self.set_out_trigger()
     
@@ -164,23 +164,22 @@ class Scan2D:
                     for row in self.srv_targets[::-1]:
                         self.chain.servo.move_stage_to_target(row)                 
                 
-        
     def execute_continous_2D_scan(self):
         """execute the 2D continous scan"""
         self.init_2D_scan()
         if self.scan_pars["main_axis"] == "master":
             for row_idx,row in enumerate(self.srv_targets):
-                self.chain.servo.move_stage_to_target(row)               
-            if row_idx%2 == 0:
-                self.chain.master.move_stage_to_ref(self.targets[-1])
-            else:
-                self.chain.master.move_stage_to_ref(self.targets[0])
+                self.chain.servo.move_stage_to_target(row)           
+                if row_idx%2 == 0:
+                    self.chain.master.move_stage_to_target(self.targets[-1])
+                else:
+                    self.chain.master.move_stage_to_target(self.targets[0])
 
         elif self.scan_pars["main_axis"] == "servo":
             for col_idx,col in enumerate(self.targets):
                 self.chain.master.move_stage_to_target(col)               
                 if col_idx%2 == 0:
-                    self.chain.servo.move_stage_to_ref(self.srv_targets[-1])
+                    self.chain.servo.move_stage_to_target(self.srv_targets[-1])
                 else:
-                    self.chain.servo.move_stage_to_ref(self.srv_targets[0])
+                    self.chain.servo.move_stage_to_target(self.srv_targets[0])
 
