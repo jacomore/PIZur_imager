@@ -2,16 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt 
 
 class OutputProcessor():
-    def __init__(self,filename,scan_pars,daq_pars,N_rows,N_cols):
+    def __init__(self,filename,scan_pars,daq_pars):
         # parameters obtained in input by input_dicts
         self.scan_pars = scan_pars
         # filename that contains the output data
         self.filename = filename
         # parameters obtained by the daq
         self.daq_pars = daq_pars
-
-        self.N_rows = N_rows
-        self.N_cols = N_cols
+        self.N_rows = daq_pars["out_rows"]
+        self.N_cols = daq_pars["out_columns"]
 
     def get_raw_data(self):
         """read raw_data as a Numpy array and return only the third column, 
@@ -51,7 +50,6 @@ class OutputProcessor():
             out_data = raw_data
         # save data and image
         self.save_1D_data_file(targets,out_data)
-        self.save_1D_data_image(targets,out_data)
 
             
         
