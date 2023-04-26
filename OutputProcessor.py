@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 
 class OutputProcessor():
-    def __init__(self,filename,scan_pars,daq_pars):
+    def __init__(self,filename,scan_pars,daq_pars,N_rows,N_cols):
         # parameters obtained in input by input_dicts
         self.scan_pars = scan_pars
         # filename that contains the output data
@@ -10,19 +10,20 @@ class OutputProcessor():
         # parameters obtained by the daq
         self.daq_pars = daq_pars
 
+        self.N_rows = N_rows
+        self.N_cols = N_cols
+
     def get_raw_data(self):
         """read raw_data as a Numpy array and return only the third column, 
            containing the pixels in a column """
         raw_data = np.genfromtxt(self.filename,skip_header = 1, delimiter = ";")
         return raw_data[:,2] # third column contains all the data in a column     
     
-    def evaluate_averaged_data(self,raw_data,N_cols,N_rows): 
+    def evaluate_averaged_data(self,raw_data): 
         """average the input data in case of a 1D discrete scan"""
-        N_cols = self.daq_pars["out_cols"]
-        N_rows = self.daq_pars["out_rows"]
-        avg_data = np.empty(N_rows)
-        for row in range(N_rows):
-            avg_data[row] = np.mean(raw_data[row*N_cols:(row + 1)*N_cols])
+        avg_data = np.empty(self.N_rows)
+        for row in range(self.N_rows):
+            avg_data[row] = np.mean(raw_data[row*self.N_cols:(row + 1)*self.N_cols])
         return avg_data
     
     def evaluate_target_positions(self,scanedges,stepsize):
@@ -32,22 +33,10 @@ class OutputProcessor():
         Npoints = int((scanedges[1]-scanedges[0])/stepsize) + 1
         return np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
 
-
-#    def save_2D_data_file(self,primary,secondary,avg_data):
-
     def save_1D_data_file(self,targets,avg_data):
         out_name = "cleaned_1D_data.txt"
         out_file = np.column_stack((targets,avg_data))
         np.savetxt(out_name, out_file, fmt = "%10.6f", delimiter = ",")
-        
-        
-    def save_1D_data_image(self,targets,avg_data):
-        fig, ax = plt.subplots()
-        ax.set_xlabel("Position [mm]", fontsize=13)
-        ax.set_ylabel("Signal [a.u]", fontsize=13)
-        ax.tick_params(axis='both', which='major', labelsize=13)
-        ax.plot(targets, avg_data,".",color = "red",markersize=7,alpha = 1)
-        fig.savefig("Output_fig.png", dpi = fig.dpi)
 
     def process_1D_data(self):
         # get targets position
@@ -57,7 +46,7 @@ class OutputProcessor():
         # get out_data
         raw_data = self.get_raw_data()
         if (self.scan_pars["type"] == "discrete"):
-            out_data = self.evaluate_averaged_data(raw_data)
+            out_data = self.evaluate_averaged_data(raw_data, )
         else: 
             out_data = raw_data
         # save data and image
@@ -79,17 +68,14 @@ class OutputProcessor():
 
     def save_2D_data_file(self,primary,secondary,out_data):
         """Return a tabular array with the values of the measured signal at each positions"""
-        N_cols = self.daq_pars["out_cols"]
-        N_rows = self.daq_pars["out_rows"]
         out_name = "cleaned_2D_data.txt"
-        length_of_file = N_rows * N_cols
-        out_file = np.empty(length_of_file)
+        length_of_file = self.N_rows * self.N_cols
+        self.out_file = np.empty((length_of_file,3))
         for row_idx,row in enumerate(secondary):
-            row_file = np.empty(N_cols)
-            out_file[row_idx*N_cols:(row_idx+1)*N_cols] =  np.column_stack((row_file,primary,out_data[row_idx*N_cols:(row_idx+1)*N_cols]))          
-            
-        np.savetxt(out_name, out_file, fmt = "%10.6f", delimiter = ",")
-
+            row_file = np.empty(self.N_cols)
+            row_file[:] = row
+            self.out_file[row_idx*self.N_cols:(row_idx+1)*self.N_cols] =  np.column_stack((primary,row_file,out_data[row_idx*self.N_cols:(row_idx+1)*self.N_cols]))          
+        np.savetxt(out_name, self.out_file, delimiter = ",")
         
     def process_2D_data(self):
         primary_targets,secondary_targets = self.evaluate_2D_targets()
@@ -98,6 +84,13 @@ class OutputProcessor():
             out_data = self.evaluate_averaged_data(raw_data)
         else:
             out_data = raw_data
+        self.save_2D_data_file(
+                                primary = primary_targets,
+                                secondary =secondary_targets,
+                                out_data = out_data
+                                )
+
+        
             
         
                
