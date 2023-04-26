@@ -53,44 +53,6 @@ class OutputProcessor():
         self.save_1D_data_file(targets,out_data)
         self.save_1D_data_image(targets,out_data)
 
-    def evaluate_2D_targets(self):
-        scanedges = self.scan_pars["scan_edges"]
-        stepsize = self.scan_pars["stepsize"]
-        targets = self.evaluate_target_positions(scanedges,stepsize)
-        srv_scanedges = self.scan_pars["scan_edges_servo"]
-        srv_stepsize = self.scan_pars["stepsize_servo"]
-        srv_targets = self.evaluate_target_positions(srv_scanedges,srv_stepsize)
-        
-        if self.scan_pars["main_axis"] == "master":
-            return targets, srv_targets
-        else:
-            return srv_targets,targets
-
-    def save_2D_data_file(self,primary,secondary,out_data):
-        """Return a tabular array with the values of the measured signal at each positions"""
-        out_name = "cleaned_2D_data.txt"
-        length_of_file = self.N_rows * self.N_cols
-        self.out_file = np.empty((length_of_file,3))
-        for row_idx,row in enumerate(secondary):
-            row_file = np.empty(self.N_cols)
-            row_file[:] = row
-            self.out_file[row_idx*self.N_cols:(row_idx+1)*self.N_cols] =  np.column_stack((primary,row_file,out_data[row_idx*self.N_cols:(row_idx+1)*self.N_cols]))          
-        np.savetxt(out_name, self.out_file, delimiter = ",")
-        
-    def process_2D_data(self):
-        primary_targets,secondary_targets = self.evaluate_2D_targets()
-        raw_data = self.get_raw_data()
-        if (self.scan_pars["type"]) == "discrete":
-            out_data = self.evaluate_averaged_data(raw_data)
-        else:
-            out_data = raw_data
-        self.save_2D_data_file(
-                                primary = primary_targets,
-                                secondary =secondary_targets,
-                                out_data = out_data
-                                )
-
-        
             
         
                
