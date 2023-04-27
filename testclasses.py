@@ -1,4 +1,5 @@
 from PI_commands import Stepper
+from Scanners import Scan1D
 from InputProcessor import InputProcessor
 from pipython import pitools,GCS2Commands
 from math import isclose
@@ -18,11 +19,11 @@ class TestStepper:
     
     def test_negative_reference(self):
         self.stepper.move_stage_to_ref('FNL')
-        assert isclose(self.stepper.get_curr_pos()['1'],0,abs_tol=0.5e-3)
+        assert isclose(self.stepper.get_curr_pos()['1'],0,rel_tol=1e-8)
 
     def test_positive_reference(self):
         self.stepper.move_stage_to_ref('FPL')
-        assert isclose(self.stepper.get_curr_pos()['1'],102,abs_tol=0.5e-3)
+        assert isclose(self.stepper.get_curr_pos()['1'],102,rel_tol=1e-8)
 
     def test_pos_is_float(self):
         pos = self.stepper.get_curr_pos()['1']
@@ -30,15 +31,15 @@ class TestStepper:
  
     def test_velocity_is_set(self):
         self.stepper.set_velocity(10)
-        assert isclose(GCS2Commands.qVEL(self.stepper.pidevice)['1'],10,rel_tol=1e-3)
+        assert isclose(GCS2Commands.qVEL(self.stepper.pidevice)['1'],10,rel_tol=1e-8)
     
     def test_acceleration_is_set(self):
         self.stepper.set_acceleration(10)
-        assert isclose(GCS2Commands.qACC(self.stepper.pidevice)['1'],10,rel_tol=1e-3)
+        assert isclose(GCS2Commands.qACC(self.stepper.pidevice)['1'],10,rel_tol=1e-8)
        
     def test_target_is_reached(self):
         self.stepper.move_stage_to_target(10)
-        assert isclose(self.stepper.get_curr_pos()['1'],10,abs_tol = 0.5e-3)
+        assert isclose(self.stepper.get_curr_pos()['1'],10,rel_tol=1e-8)
     
     def test_trigger_is_set(self):
         self.stepper.configure_out_trigger(6)
@@ -121,3 +122,53 @@ class TestInputProcessor:
         assert daq_pars["trigger type"] == "HW trigger"
         assert daq_pars["trigger edge"] == "negative"
         assert isclose(daq_pars["holdoff"],duration*0.95,rel_tol = 1e-8)
+
+
+class TestScanners:
+    inPars = {
+        "scan_pars" : {		
+            "type": "discrete",
+            "scan_edges": [0,1],
+            "stepsize" : 0.1,
+            "velocity" : 1,
+            "acceleration" : 1,
+            "sampling_freq" : 100
+            },
+    "pi" : 	{	"ID":"C-663",
+            "stage_ID": "L-406.40SD00",
+            "refmode": "FNL"
+		    }
+    }
+    
+    scanner = Scan1D(inPars)
+    
+    def test_initialization_pars(self):
+        assert self.scanner.PI["ID"] == "C-663"
+        assert self.scanner.PI["stage_ID"] == "L-406.40SD00"
+        assert self.scanner.PI["refmode"] == "FNL"
+        assert self.scanner.scan_pars["type"] == "discrete"
+        assert isclose(self.scanner.scan_pars["scan_edges"][0],0,rel_tol = 1e-8)
+        assert isclose(self.scanner.scan_pars["scan_edges"][1],1,rel_tol = 1e-8)
+        assert isclose(self.scanner.scan_pars["stepsize"],0.1,rel_tol = 1e-8)
+        assert isclose(self.scanner.scan_pars["velocity"],1,rel_tol= 1e-8)
+        assert isclose(self.scanner.scan_pars["acceleration"],1,rel_tol= 1e-8)
+        assert isclose(self.scanner.scan_pars["sampling_freq"],100,rel_tol= 1e-8)
+
+    def test_stepper_instantiated(self):
+        assert self.scanner.master is not None
+    
+    def test_evaluate_target_positions(self):
+        self.scanner.evaluate_target_positions()
+        Npoints = int(abs(self.scanner.scan_edges[1]-self.scanner.scan_edges[0])/self.scanner.stepsize) + 1
+        assert len(self.scanner.targets == Npoints)
+        assert self.scanner.targets[0] == self.scanner.scan_edges[0]
+        assert self.scanner.targets[-1] == self.scanner.scan_edges[1]  # by induction is right because of linspace
+
+    def test_1D_discrete_scan(self):
+        self.scanner.execute_discrete_1D_scan()
+        assert isclose(self.scanner.master.get_curr_pos()['1'],self.scanner.targets[-1],rel_tol=1e-8)
+
+    def test_1D_continuous_scan(self):
+        self.scanner.execute_continuous_1D_scan()
+        assert isclose(self.scanner.master.get_curr_pos()['1'],self.scanner.targets[-1],rel_tol=1e-8)
+

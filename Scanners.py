@@ -24,12 +24,13 @@ class Scan1D:
     def setup_1D_PI(self):
         """Set the parameters of interest in the ROM of the device"""
         self.master.set_velocity(self.scan_pars["velocity"])
+        self.master.set_acceleration(self.scan_pars["acceleration"])
 
     def evaluate_target_positions(self):
         """ Evaluate the partition of the target points for a 1D scan   
         """ 
         # calculate targets points
-        Npoints = int((self.scan_edges[1]-self.scan_edges[0])/self.stepsize) + 1
+        Npoints = int(abs(self.scan_edges[1]-self.scan_edges[0])/self.stepsize) + 1
         self.targets =  np.linspace(self.scan_edges[0],self.scan_edges[1],Npoints,endpoint=  True)
 
     def init_1D_scan(self):
@@ -49,7 +50,7 @@ class Scan1D:
             self.master.move_stage_to_target(target)        
             print("Position: ", target)
     
-    def execute_continous_1D_scan(self):
+    def execute_continuous_1D_scan(self):
         """ Execute the 1D scan by: (1) moving the axis on all the targets positions, 
             (2) measuring the raw_data from the Zurich lock-in (3) moving continously
         """

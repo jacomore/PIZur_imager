@@ -1,7 +1,6 @@
 {	"scan_pars" :
 		{			
 			"type": "continous",
-			"main_axis" : "master",
 			"scan_edges": [83.6,84.8],
             "stepsize" : 0.001,
 			"velocity" : 10,
