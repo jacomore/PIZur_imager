@@ -30,8 +30,10 @@ class InputProcessor():
         self.vel = scan_pars["velocity"]
         self.sampl_freq = scan_pars["sampling_freq"]
         self.type = scan_pars["type"]
+        self.delta = self.delta_calculator()
+
     
-    def process_continuous_input(self,delta):
+    def rows_columns_contiuous(self):
             """
             Process input data to find the number of rows and columns
             for a continuous scan with PI controller and Zurich lock-in.
@@ -49,10 +51,10 @@ class InputProcessor():
                 The number of rows for the data acquisition.
             """
             N_rows = 1
-            N_cols = int(np.floor(delta/self.stepsize)) + 1
-            return N_cols, N_rows
+            N_cols = int(np.floor(self.delta/self.stepsize)) + 1
+            return N_rows, N_cols
     
-    def process_discrete_input(self,delta):
+    def rows_columns_discrete(self):
         """
         Process input data to find the number of rows and columns
         for a discrete scan with Pi controller and Zurich lock-in
@@ -69,11 +71,11 @@ class InputProcessor():
         N_rows : int
             The number of rows for the data acquisition.
         """
-        N_rows = int(np.floor(delta/self.stepsize)) + 1
+        N_rows = int(np.floor(self.delta/self.stepsize)) + 1
         N_cols = int(np.floor(0.05*self.sampl_freq))
-        return N_cols, N_rows
+        return N_rows, N_cols
 
-    def process_input(self):
+    def evaluate_daq_pars(self):
         """
         Process input data for a 1D scan to find the number of rows, columns,
         and the duration of the triggered data acquisition for the Zurich lock-in.
@@ -97,16 +99,15 @@ class InputProcessor():
                 - holdoff : float
                     The holdoff time for the trigger
         """
-        delta = abs(self.scan_edges[1]-self.scan_edges[0])
 
         if self.type == "continuous":
-            duration = self.duration_calculator(delta)
-            N_cols, N_rows = self.process_continuous_input(delta)
-            mode = "Linear"
+            duration = self.duration_calculator()
+            N_rows, N_cols = self.rows_columns_contiuous()
+            mode = "linear"
             edge = "positive"
         else:
             duration = 0.05 # 50 milliseconds
-            N_cols, N_rows = self.process_discrete_input(delta)
+            N_rows, N_cols = self.rows_columns_discrete()
             mode = "Exact (on-grid)"
             edge = "negative"
             
@@ -121,7 +122,10 @@ class InputProcessor():
                     }
         return daq_pars
 
-    def duration_calculator(self,delta):
+    def delta_calculator(self):
+        return abs(self.scan_edges[1]-self.scan_edges[0])
+
+    def duration_calculator(self):
         """
         Calculate the duration of the triggered data acquisition for a continuous scan.
 
@@ -139,12 +143,14 @@ class InputProcessor():
         duration : float
             The duration of the triggered data acquisition.
         """
-        if (np.sqrt(self.acc*delta)>self.vel):
-            duration = self.vel/self.acc + delta/self.vel
+        print(self.acc*self.delta)
+        if (np.sqrt(self.acc*self.delta/2)>self.vel):
+            duration = 2*self.vel/self.acc + self.delta/self.vel
         else:
-            duration = np.sqrt(delta/self.acc)
+            duration = 2*np.sqrt(self.delta/self.acc)
         return duration
 
             
         
 
+    
