@@ -86,11 +86,15 @@ class Stepper:
     
     def get_curr_pos(self):
         """Returns the current position of the axis"""
-        return self.pidevice.qPOS(self.pidevice)['1']
+        return self.pidevice.qPOS('1')
 
     def set_velocity(self,velocity):
         """ Set the velocity of the master device"""
         self.pidevice.VEL('1',velocity)
+
+    def set_acceleration(self,acceleration):
+        """ Set the acceleration of the master device"""
+        self.pidevice.ACC('1',acceleration)
         
     def move_stage_to_target(self,target):
         """ move the device to target. target is a number (float)"""
@@ -110,4 +114,6 @@ class Stepper:
         # enable trigger output with the configuration defined above
         self.pidevice.TRO(1, True)
         
-    
+    def close_and_reset(self):
+        """Close the connection and reset the axis property"""
+        self.pidevice.CloseConnection()    
