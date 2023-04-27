@@ -83,12 +83,6 @@ class Stepper:
             self.pidevice.FPL()
         pitools.waitontarget(self.pidevice)
         print(f"Stage: {GCS2Commands.qCST(self.pidevice)['1']} successfully referenced.")
-            
-    def evaluate_axis_edges(self):
-        """Returns the values of the edges of the axis, which define the scannable range."""
-        neg_edge = list(self.pidevice.qTMN().values())
-        pos_edge = list(self.pidevice.qTMX().values())
-        return [neg_edge[0], pos_edge[0]]
     
     def get_curr_pos(self):
         """Returns the current position of the axis"""

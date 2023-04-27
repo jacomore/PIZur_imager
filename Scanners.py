@@ -1,4 +1,4 @@
-from PI_commands import Stepper, StepperChain
+from PI_commands import Stepper
 import numpy as np
 
 class Scan1D:
@@ -11,7 +11,7 @@ class Scan1D:
         self.connect_1D_PI()   
         # set properties of the motion and of the devices
         self.setup_1D_PI()
-        # check input scan edges validity and defines new attributes
+
         self.scan_edges = self.scan_pars["scan_edges"]
         self.stepsize = self.scan_pars["stepsize"]
         self.evaluate_target_positions()

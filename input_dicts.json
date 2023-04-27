@@ -1,21 +1,17 @@
 {	"scan_pars" :
 		{			
-			"type": "discrete",
+			"type": "continous",
 			"main_axis" : "master",
-			"dim" : 1,
-			"scan_edges": [20.7,21.3],
+			"scan_edges": [83.6,84.8],
             "stepsize" : 0.001,
 			"velocity" : 10,
 			"acceleration" : 20,
-			"scan_edges_servo": [0,100],
-            "stepsize_servo" : 2,
-			"velocity_servo" :4
+			"sampling_freq" : 1.67e3
 		},
 	"pi" : 
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
-            "refmode": "FNL",
-			"refmode_servo": "FNL"
+            "refmode": "FNL"
 		}
 }
 			

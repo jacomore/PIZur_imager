@@ -28,7 +28,7 @@ class InputProcessor():
         self.stepsize = scan_pars["stepsize"]
         self.acc = scan_pars["acceleration"]
         self.vel = scan_pars["velocity"]
-        self.sampl_freq = scan_pars["sampling_frequency"]
+        self.sampl_freq = scan_pars["sampling_freq"]
         self.type = scan_pars["type"]
     
     def process_continuous_input(self,delta):
