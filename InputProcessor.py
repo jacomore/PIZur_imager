@@ -143,9 +143,8 @@ class InputProcessor():
         duration : float
             The duration of the triggered data acquisition.
         """
-        print(self.acc*self.delta)
-        if (np.sqrt(self.acc*self.delta/2)>self.vel):
-            duration = 2*self.vel/self.acc + self.delta/self.vel
+        if (np.sqrt(self.acc*self.delta)>self.vel):
+            duration = self.vel/self.acc + self.delta/self.vel
         else:
             duration = 2*np.sqrt(self.delta/self.acc)
         return duration
