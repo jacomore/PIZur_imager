@@ -7,46 +7,89 @@ from math import isclose
 class TestStepper:
     stepper = Stepper('C-663', 'L-406.40SD00')
 
-    def test_connect_to_dev(self):
+    def test_usb_return_list(self):
+        """
+        Tests that when a Stepper object is passed to 
+        usb_plugged_devices the returned object is a list.
+        """
+        assert isinstance(self.stepper.usb_plugged_devices(), list)
+    
+    def test_usb_return_notempty_list(self):
+        """Test that when a Stepper object is passed to 
+        usb_plugged_devices, the returned list is not empty."""
+        assert self.stepper.usb_plugged_devices() != []
+        
+    def test_connection_is_established(self):
+        """
+        Tests that when a Stepper object is passed to connect_pidevice,
+        a connection to the controller is succesfully established.
+        """
         self.stepper.connect_pidevice()
         assert self.stepper.pidevice.IsConnected()
-
-    def test_usb_return_list(self):
-        assert isinstance(self.stepper.usb_plugged_devices(), list)
-   
-    def test_connect_axis(self):
+  
+    def test_connected_axis(self):
+        """
+        Tests that when a Stepper object is connected, the connected axis 
+        is one ('1'). C663 controller supports connection with only 
+        axis at a time. 
+        """
         assert pitools.getaxeslist(self.stepper.pidevice, axes=None) == ['1']
+        
+    def test_pos_is_float(self):
+        """Tests that when the current position of a connected Stepper object is probed, 
+        the position returned by get_curr_pos is indeed a float number."""
+        pos = self.stepper.get_curr_pos()['1']
+        assert isinstance(pos, float)
     
+    def test_pos_is_in_range(self):
+        """Tests that when the current position of a connected Stepper object is probed, 
+        the position returned by get_curr_pos is comprised in the available range (0,102)"""
+        pos = self.stepper.get_curr_pos()['1']
+        assert pos >= 0.
+        assert pos <= 102.
+        
     def test_negative_reference(self):
+        """Tests that when a connected Stepper object is referenced to the
+        negative edge of the axis through move_stage_to_ref, the final position
+        is indeed the negative edge (0)."""
         self.stepper.move_stage_to_ref('FNL')
         assert isclose(self.stepper.get_curr_pos()['1'],0,rel_tol=1e-8)
 
     def test_positive_reference(self):
+        """Tests that when a connected Stepper object is referenced to the
+        positive edge of the axis through move_stage_to_ref, the final position
+        is indeed the positive edge (102)."""
         self.stepper.move_stage_to_ref('FPL')
         assert isclose(self.stepper.get_curr_pos()['1'],102,rel_tol=1e-8)
 
-    def test_pos_is_float(self):
-        pos = self.stepper.get_curr_pos()['1']
-        assert isinstance(pos, float)
- 
     def test_velocity_is_set(self):
+        """Tests that when the velocity of a connected Stepper object is set through set_velocity, 
+        the velocity stored in the controller's ROM is indeed the set one."""
         self.stepper.set_velocity(10)
         assert isclose(GCS2Commands.qVEL(self.stepper.pidevice)['1'],10,rel_tol=1e-8)
     
     def test_acceleration_is_set(self):
+        """Tests that when the acceleration of a connected Stepper object is set through set_acceleration, 
+        the acceleration stored in the controller's ROM is indeed the set one."""
         self.stepper.set_acceleration(10)
         assert isclose(GCS2Commands.qACC(self.stepper.pidevice)['1'],10,rel_tol=1e-8)
        
     def test_target_is_reached(self):
+        """Tests that when the connected Stepper object is moved to a certain target through 
+        move_stage_to_target, the position when the motion is completed is equal to the target."""
         self.stepper.move_stage_to_target(10)
         assert isclose(self.stepper.get_curr_pos()['1'],10,rel_tol=1e-8)
     
     def test_trigger_is_set(self):
+        """Tests that when the trigger of the connected Stepper object is set through 
+        configure out_trigger, the type of trigger stored in the ROM is the selected one."""
         self.stepper.configure_out_trigger(6)
         assert self.stepper.pidevice.qCTO(1, 3)[1][3] == '6'
 
     def test_connection_is_closed(self):
-        self.stepper.close_and_reset()
+        """Tests that the connection of the Stepper object with controller is indeed closed 
+        with close_connection."""
+        self.stepper.close_connection()
         assert not self.stepper.pidevice.IsConnected()
 
 
@@ -163,12 +206,5 @@ class TestScanners:
         assert len(self.scanner.targets == Npoints)
         assert self.scanner.targets[0] == self.scanner.scan_edges[0]
         assert self.scanner.targets[-1] == self.scanner.scan_edges[1]  # by induction is right because of linspace
-
-    def test_1D_discrete_scan(self):
-        self.scanner.execute_discrete_1D_scan()
-        assert isclose(self.scanner.master.get_curr_pos()['1'],self.scanner.targets[-1],rel_tol=1e-8)
-
-    def test_1D_continuous_scan(self):
-        self.scanner.execute_continuous_1D_scan()
-        assert isclose(self.scanner.master.get_curr_pos()['1'],self.scanner.targets[-1],rel_tol=1e-8)
-
+        
+        

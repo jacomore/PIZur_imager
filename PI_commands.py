@@ -114,6 +114,6 @@ class Stepper:
         # enable trigger output with the configuration defined above
         self.pidevice.TRO(1, True)
         
-    def close_and_reset(self):
+    def close_connection(self):
         """Close the connection and reset the axis property"""
         self.pidevice.CloseConnection()    
