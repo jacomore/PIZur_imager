@@ -96,6 +96,17 @@ class Stepper:
         """ Set the acceleration of the master device"""
         self.pidevice.ACC('1',acceleration)
         
+    def get_velocity(self):
+        """ Get and return the velocity of the master device"""
+        velocity = GCS2Commands.qVEL(self.pidevice)['1']
+        return velocity
+
+    def get_acceleration(self):
+        """ Get and return the velocity of the master device"""
+        acceleration = GCS2Commands.qACC(self.pidevice)['1']
+        return acceleration
+
+        
     def move_stage_to_target(self,target):
         """ move the device to target. target is a number (float)"""
         self.pidevice.MOV(self.pidevice.axes,target)
