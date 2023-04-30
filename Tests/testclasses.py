@@ -1,13 +1,27 @@
 from PI_commands import Stepper
 from Scanners import Scan1D
 from InputProcessor import InputProcessor
-from pipython import pitools,GCS2Commands
+from pipython import pitools,GCS2Commands,GCSDevice
 from math import isclose
 import numpy as np 
 
 class TestStepper:
     stepper = Stepper('C-663', 'L-406.40SD00')
-
+    
+    def test_initialization_pidevice(self):
+        """Tests that when a Stepper object is initialiazed through 
+        the __init__ method, the instantiation of the GCSDevice is corrected."""
+        assert isinstance(self.stepper.pidevice, GCSDevice)
+    
+    def test_initialization_controller_axis(self):
+        """Tests that when a Stepper object is initialized through
+        the __init__ method, the attributes controller_id and axis_id are
+        properly assigned."""
+        controller = 'C-663'
+        axis = 'L-406.40SD00'
+        assert self.stepper.controller_id == controller
+        assert self.stepper.axis_id == axis
+            
     def test_usb_return_list(self):
         """
         Tests that when a Stepper object is passed to 
@@ -23,7 +37,7 @@ class TestStepper:
     def test_connection_is_established(self):
         """
         Tests that when a Stepper object is passed to connect_pidevice,
-        a connection to the controller is succesfully established.
+        a connection to the controller is successfully established.
         """
         self.stepper.connect_pidevice()
         assert self.stepper.pidevice.IsConnected()
@@ -38,7 +52,7 @@ class TestStepper:
         
     def test_pos_is_float(self):
         """Tests that when the current position of a connected Stepper object is probed, 
-        the position returned by get_curr_pos is indeed a float number."""
+        the position returned by get_curr_pos is a float number."""
         pos = self.stepper.get_curr_pos()['1']
         assert isinstance(pos, float)
     
@@ -79,13 +93,13 @@ class TestStepper:
         """Tests that when the velocity of a connected Stepper object is set through set_velocity, 
         the velocity stored in the controller's ROM is indeed the set one."""
         self.stepper.set_velocity(15.44)
-        assert isclose(self.stepper.get_velocity(),10,rel_tol=1e-8)
+        assert isclose(self.stepper.get_velocity(),15.44,rel_tol=1e-8)
     
     def test_acceleration_is_set(self):
         """Tests that when the acceleration of a connected Stepper object is set through set_acceleration, 
         the acceleration stored in the controller's ROM is indeed the set one."""
         self.stepper.set_acceleration(12.69)
-        assert isclose(self.stepper.get_acceleration(),10,rel_tol=1e-8)
+        assert isclose(self.stepper.get_acceleration(),12.69,rel_tol=1e-8)
        
     def test_target_is_reached(self):
         """Tests that when the connected Stepper object is moved to a certain target through 
@@ -120,7 +134,7 @@ class TestInputProcessor:
 
     def test_initialization(self):
         """Tests that when an instance of InputProcessor is created, the inizialitation of the 
-        object's attributes through __init__ method is successful."""
+        object's attributes through __init__ method is correct."""
         assert self.inputprocess.type == "discrete"
         assert isclose(self.inputprocess.scan_edges[0],0,rel_tol = 1e-8)
         assert isclose(self.inputprocess.scan_edges[1],1,rel_tol = 1e-8)
@@ -134,7 +148,7 @@ class TestInputProcessor:
         is correctly evaluated through delta_calculator given the input scan_edges."""
         assert isclose(self.inputprocess.delta,1,rel_tol = 1e-8)
     
-    def test_delta_is_abs(self):
+    def test_delta_traslation_invariant(self):
         """Tests that when an InputProcessor object is instantiated, the attribute delta 
         is invariant under rigid traslation of the scan_edges coordinates."""
         # assumes that scan_edges[1] + 10 < 102
@@ -151,14 +165,14 @@ class TestInputProcessor:
     def test_duration_velocity_not_constant(self):
         """Tests that when the InputProcessor object is instantiated, the computation 
         of the duration of the motion through duration_calculator is corrected. 
-        Here is covered the case in which a constant velocity is never reached, i.e, sqrt(acc*delta/2)<=vel         
+        Here is covered the case in which a constant velocity is never reached, i.e, sqrt(acc*delta)<=vel         
         """
         assert isclose(self.inputprocess.duration_calculator(),2,rel_tol = 1e-8)
     
     def test_duration_velocity_constant(self):
         """Tests that when the InputProcessor object is instantiated, the computation 
         of the duration of the motion through duration_calculator is corrected. 
-        Here is covered the case in which a constant velocity is never reached, i.e, sqrt(acc*delta/2)>vel         
+        Here is covered the case in which a constant velocity is reached, i.e, sqrt(acc*delta)>vel         
         """
         self.inputprocess.acc = 0.5
         assert isclose(self.inputprocess.duration_calculator(),2*np.sqrt(2),rel_tol=1e-8)
@@ -178,7 +192,7 @@ class TestInputProcessor:
         
     def test_cols_continuous_values(self):
         """Tests that when an InputProcessor objected in instantiated and the scan mode is set
-        to continuous, the number of rows of the DAQ must be set to 1"""
+        to continuous, the number of columns is given by the floor of the ratio of delta over stepsize."""
         _ , N_cols = self.inputprocess.rows_columns_contiuous()
         assert N_cols == 11
     
@@ -205,7 +219,7 @@ class TestInputProcessor:
     
     def test_daq_pars_continuous(self):
         """Tests that when an InputProcessor object is instantiated, the scan mode is set 
-        to continuous and the daq_pars dictionary is returned, the values associated
+        to continuous and the daq_pars dictionary is built-up, the values associated
         with the keys are corrected. """
         self.inputprocess.type = "continuous"
         daq_pars = self.inputprocess.evaluate_daq_pars()
@@ -221,7 +235,7 @@ class TestInputProcessor:
 
     def test_daq_pars_discrete(self):
         """Tests that when an InputProcessor object is instantiated, the scan mode is set 
-        to discrete and the daq_pars dictionary is returned, the values associated
+        to discrete and the daq_pars dictionary is built-up, the values associated
         with the keys are corrected. """
         self.inputprocess.type = "discrete"
         daq_pars = self.inputprocess.evaluate_daq_pars()
@@ -246,20 +260,23 @@ class TestScanners:
             "acceleration" : 1,
             "sampling_freq" : 100
             },
-    "pi" : 	{	"ID":"C-663",
+        "pi" : 	{	
+            "ID":"C-663",
             "stage_ID": "L-406.40SD00",
-            "refmode": "FNL"
+            "refmode": "FNL",
+            "trig_type":6
 		    }
-    }
+            }
     
     scanner = Scan1D(inPars)
     
     def test_initialization_pars(self):
         """Tests that when an instance of Scan1D is created, the inizialitation of the 
-        object's attributes through __init__ method is successful."""
+        object's attributes through __init__ method is correct."""
         assert self.scanner.PI["ID"] == "C-663"
         assert self.scanner.PI["stage_ID"] == "L-406.40SD00"
         assert self.scanner.PI["refmode"] == "FNL"
+        assert self.scanner.PI["trig_type"] == 6
         assert self.scanner.scan_pars["type"] == "discrete"
         assert isclose(self.scanner.scan_pars["scan_edges"][0],0,rel_tol = 1e-8)
         assert isclose(self.scanner.scan_pars["scan_edges"][1],1,rel_tol = 1e-8)
@@ -270,63 +287,63 @@ class TestScanners:
     
     def test_dimension_target_positions(self):
         """Tests that when an instance of Scan1D is created,the dimension of the 
-        targets position is correct." 
+        targets array is correct." 
         """
         N_targets = 11
         assert len(self.scanner.targets) == N_targets
         
     def test_values_target_positions(self):
         """Tests that when an instance of Scan1D is created, the first and the final 
-        point of targets position is corrected."""
+        point of targets is correct."""
         assert isclose(self.scanner.targets[0],self.scanner.scan_edges[0],rel_tol = 1e-8)
         assert isclose(self.scanner.targets[-1],self.scanner.scan_edges[1],rel_tol = 1e-8)  # by induction is right because of linspace
     
-    def test_master_is_instantiated(self):
+    def test_stepper_is_instantiated(self):
         """Tests that when an instance of Scan1D is created, the instance of Stepper
-        (master) is properly instantiated throught the __init__ method."""
-        assert self.scanner.master is not None
+        is properly instantiated throught the __init__ method."""
+        assert isinstance(self.scanner.stepper,Stepper)
     
-    def test_master_is_connected(self):
+    def test_stepper_is_connected(self):
         """Tests that when an instance of Scan1D is created and connected_master is called, 
         master is properly connected to the PI controller"""
-        self.scanner.connect_1D_PI()
-        assert self.scanner.master.pidevice.isConnected()
+        self.scanner.connect_stepper()
+        assert self.scanner.stepper.pidevice.isConnected()
 
-    def test_master_is_setup(self):
-        """Tests that when an instance of Scan1D is created and master is connected, 
-        velocity and acceleration are properly set through the method setup_master"""
-        self.scanner.setup_master(self)
-        assert isclose(self.scanner.master.get_velocity(),1,rel_tol = 1e-8)
-        assert isclose(self.scanner.master.get_acceleration(),1,rel_tol = 1e-8)
+    def test_vel_acc_stepper(self):
+        """Tests that when an instance of Scan1D is created and stepper is connected, 
+        velocity and acceleration are properly set through the method setup_motion_stepper"""
+        self.scanner.setup_motion_stepper(self)
+        assert isclose(self.scanner.stepper.get_velocity(),1,rel_tol = 1e-8)
+        assert isclose(self.scanner.stepper.get_acceleration(),1,rel_tol = 1e-8)
         
     def test_initial_scan_position(self):
-        """Tests that when an instance of Scan1D is created and init_1D_scan is called,
+        """Tests that when an instance of Scan1D is created and init_stepper_scan is called,
         the axis is moved to the first target position."""
-        self.scanner.init_1D_scan()
-        cur_pos = self.scanner.master.get_curr_pos()
+        self.scanner.init_stepper_scan()
+        cur_pos = self.scanner.stepper.get_curr_pos()
         assert isclose(cur_pos,self.scanner.targets[0])
 
     def test_trigger_is_configured(self):
         """Tests that when an instance of Scan1D is created and init_1D_scan is called, 
-        the output trigger is configured is activated with type 6.
+        the output trigger is set and activated.
         """
-        self.scanner.init_1D_scan()
-        assert self.scanner.master.pidevice.qCTO(1, 3)[1][3] == '6'
+        trig_type = self.inPars ["pi"]["trig_type"]
+        assert self.scanner.stepper.pidevice.qCTO(1, 3)[1][3] == str(trig_type)
         
-    def test_discrete_1D_scan(self):
-        """tests that when an instance of Scan1D is created and execute_1D_discrete_scan
+    def test_discrete_scan(self):
+        """Tests that when an instance of Scan1D is created and execute_discrete_scan
            is performed, the covered positions are the targeted ones."""
-        self.scanner.init_1D_scan()
-        cur_pos = self.scanner.execute_discrete_1D_scan()
+        self.scanner.init_stepper_scan()
+        cur_pos = self.scanner.execute_discrete_scan()
         assert all(abs(pos - target) <= 0.5e-3 for pos, target in zip(cur_pos, self.scanner.targets))
     
     def test_continuous_1D_scan(self):
-        """Tests that when an instance of Scan1D is created and execute_1D_continuous_scan
-        is performed, the final target position.
+        """Tests that when an instance of Scan1D is created and execute_continuous_scan
+        is performed, the position of the stage is equal to the last target point.
         """
-        self.scanner.init_1D_scan()
-        self.scanner.execute_continuous_1D_scan()
-        cur_pos = self.scanner.master.get_curr_pos()
+        self.scanner.init_stepper_scan()
+        self.scanner.execute_continuous_scan()
+        cur_pos = self.scanner.stepper.get_curr_pos()
         assert isclose(cur_pos,self.scanner.targets[-1])
         
         
