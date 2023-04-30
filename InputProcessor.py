@@ -1,7 +1,8 @@
 import numpy as np
 
 class InputProcessor():
-    """A class to process input data for the Zurich lock-in"""
+    """A class to process input scan parameters and provide the correct parameters to set
+    in the Zurich Lock-In API data acquisition."""
     
     def __init__(self,scan_pars):
         """
@@ -23,6 +24,8 @@ class InputProcessor():
                     The sampling frequency used for discrete scans.
                 - type : str
                     The type of scan, either 'continuous' or 'discrete'.
+        delta : float
+            a float containing the absolute value of the distance between the scan edges.
         """
         self.scan_edges = scan_pars["scan_edges"]
         self.stepsize = scan_pars["stepsize"]
@@ -37,11 +40,6 @@ class InputProcessor():
             """
             Process input data to find the number of rows and columns
             for a continuous scan with PI controller and Zurich lock-in.
-
-            Parameters:
-            -----------
-            delta : float
-                The distance between the scan edges.
 
             Returns:
             --------
@@ -59,11 +57,6 @@ class InputProcessor():
         Process input data to find the number of rows and columns
         for a discrete scan with Pi controller and Zurich lock-in
 
-        Parameters:
-        -----------
-        delta : float
-            The distance between the scan edges.
-
         Returns:
         --------
         N_cols : int
@@ -77,8 +70,8 @@ class InputProcessor():
 
     def evaluate_daq_pars(self):
         """
-        Process input data for a 1D scan to find the number of rows, columns,
-        and the duration of the triggered data acquisition for the Zurich lock-in.
+        Process input data for a 1D scan to return the complete DAQ parameters
+        that suit the scan parameters.
 
         Returns:
         --------
@@ -123,6 +116,14 @@ class InputProcessor():
         return daq_pars
 
     def delta_calculator(self):
+        """
+        Calculate the absolute value of the distance between the scan edges.
+
+        Returns:
+        --------
+        delta : float
+            Absolute value of the distance between scan edges.
+        """
         return abs(self.scan_edges[1]-self.scan_edges[0])
 
     def duration_calculator(self):
