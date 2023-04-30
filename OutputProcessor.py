@@ -20,13 +20,12 @@ class OutputProcessor():
         """
         self.scan_pars = scan_pars
         self.filename = filename
-        self.daq_pars = daq_pars
-        self.N_rows = daq_pars["daq_columns"]
-        self.N_cols = daq_pars["daq_rows"]
+        self.N_rows = daq_pars["daq_rows"]
+        self.N_cols = daq_pars["daq_columns"]
 
     def get_raw_data(self):
         """
-        Read raw data from the file and return the third column, containing the pixels in a column.
+        Read raw data from the file and return the third column, containing the values of the measured signal.
 
         Returns:
         - raw_data (ndarray): a NumPy array containing the third column of the input file
@@ -61,10 +60,10 @@ class OutputProcessor():
         - targets (ndarray): a NumPy array containing the target positions
         """
         # calculate targets points
-        Npoints = int((scanedges[1]-scanedges[0])/stepsize) + 1
+        Npoints = int(abs((scanedges[1]-scanedges[0]))/stepsize) + 1
         return np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
 
-    def save_1D_data_file(self,targets,avg_data):         
+    def save_data_file(self,targets,avg_data):         
         """
         Save the cleaned 1D data to a file.
 
@@ -76,7 +75,7 @@ class OutputProcessor():
         out_file = np.column_stack((targets,avg_data))
         np.savetxt(out_name, out_file, fmt = "%10.6f", delimiter = ",")
 
-    def process_1D_data(self):
+    def save_processed_data(self):
         """
         Process the 1D data and save it to a file.
         """
@@ -91,7 +90,7 @@ class OutputProcessor():
         else: 
             out_data = raw_data
         # save data
-        self.save_1D_data_file(targets,out_data)
+        self.save_data_file(targets,out_data)
 
             
         
