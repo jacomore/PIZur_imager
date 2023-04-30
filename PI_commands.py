@@ -22,20 +22,6 @@ class Stepper:
         The ID of the PI controller this axis is connected to.
     axis_ID : str
         The ID of this axis.
-        
-    Methods
-    -------
-    USB_plugged_device()
-        Returns a list of the devices plugged through USB.
-    connect_pidevice()
-        Selects and connects the master device.
-    move_stage_to_ref(refmode)
-        Moves the selected controller towards reference position.
-    axis_edges()
-        Returns the values of the edges of the axis, which define the scannable range.
-    configure_out_trig(trigger_type)
-        Configures and sets the output trigger for a given axis.
-
     """
 
     def __init__(self, controller_id, axis_id):
@@ -51,11 +37,20 @@ class Stepper:
         self.axis_id = axis_id
     
     def usb_plugged_devices(self):
-        """Returns a list with the devices plugged through USB."""
+        """
+        Returns a list with the devices plugged through USB.
+        
+        Returns:
+        --------
+        A list object with the indeces of the connected devices
+        """
         return self.pidevice.EnumerateUSB(mask=self.controller_id)
     
     def connect_pidevice(self):
-        """I/O interface for selecting and connecting the master device."""
+        """
+        Activates an I/O interface to select the device of interest among the plugged ones.
+        Accepts a user input with the index of the device to interest and connects to it.
+        """
         devices = self.usb_plugged_devices()
         if not devices:
             raise Exception("There are no plugged devices! Please connect at least one device.")
@@ -68,7 +63,8 @@ class Stepper:
         pitools.startup(self.pidevice, self.axis_id)
         
     def move_stage_to_ref(self, refmode):
-        """Moves the selected controller towards the reference position.
+        """
+        Moves the selected controller towards the reference position.
         
         Parameters
         ----------
@@ -85,30 +81,71 @@ class Stepper:
         print(f"Stage: {GCS2Commands.qCST(self.pidevice)['1']} successfully referenced.")
     
     def get_curr_pos(self):
-        """Returns the current position of the axis"""
+        """
+        Returns the current position of the axis
+        
+        Returns
+        --------
+        A float object with the current position of the stage
+
+        """
         return self.pidevice.qPOS('1')
 
     def set_velocity(self,velocity):
-        """ Set the velocity of the master device"""
+        """ 
+        Set the velocity of motion in the ROM of the controller
+        
+        Parameters
+        ----------
+        velocity : float
+            Float defining the velocity of motion
+        """
         self.pidevice.VEL('1',velocity)
 
     def set_acceleration(self,acceleration):
-        """ Set the acceleration of the master device"""
+        """ 
+        Set the acceleration of motion in the ROM of the controller
+        
+        Parameters
+        ----------
+        acceleration : float
+            Float defining the acceleration of motion
+        """
         self.pidevice.ACC('1',acceleration)
         
     def get_velocity(self):
-        """ Get and return the velocity of the master device"""
+        """ 
+        Get and returns the velocity of the device
+        
+        Returns
+        ----------
+        velocity : float
+            Float defining the velocity of motion
+        """
         velocity = GCS2Commands.qVEL(self.pidevice)['1']
         return velocity
 
     def get_acceleration(self):
-        """ Get and return the velocity of the master device"""
+        """
+        Gets and returns the acceleration of the device
+               
+        Returns
+        --------
+        A float object defining the acceleration of motion
+        """
         acceleration = GCS2Commands.qACC(self.pidevice)['1']
         return acceleration
 
         
     def move_stage_to_target(self,target):
-        """ move the device to target. target is a number (float)"""
+        """ 
+        Moves the device to target position
+        
+        Parameters
+        ----------
+        target : float
+            Float defining the target position
+        """
         self.pidevice.MOV(self.pidevice.axes,target)
         pitools.waitontarget(self.pidevice)
 
@@ -126,5 +163,7 @@ class Stepper:
         self.pidevice.TRO(1, True)
         
     def close_connection(self):
-        """Close the connection and reset the axis property"""
+        """
+        Close the connection and reset the axis property
+        """
         self.pidevice.CloseConnection()    
