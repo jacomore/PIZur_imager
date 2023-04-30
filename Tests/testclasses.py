@@ -2,8 +2,10 @@ from PI_commands import Stepper
 from Scanners import Scan1D
 from InputProcessor import InputProcessor
 from pipython import pitools,GCS2Commands,GCSDevice
+from OutputProcessor import OutputProcessor
 from math import isclose
 import numpy as np 
+from numpy.random import random
 
 class TestStepper:
     stepper = Stepper('C-663', 'L-406.40SD00')
@@ -346,4 +348,119 @@ class TestScanners:
         cur_pos = self.scanner.stepper.get_curr_pos()
         assert isclose(cur_pos,self.scanner.targets[-1])
         
+class TestOutputProcessor:
+    scan_pars = {		
+            "type": "discrete",
+            "scan_edges": [0.3,0.],
+            "stepsize" : 0.001,
+            "velocity" : 1,
+            "acceleration" : 1,
+            "sampling_freq" : 100
+            }
+    daq_pars = {
+                "daq_columns" : 100,
+                "daq_rows" : 300,
+                "duration" : 0.05,
+                "mode" : "Exact (on-grid)",
+                "trigger type" : "HW trigger",
+                "trigger edge" : "negative",
+                "holdoff" : 0.05*(0.95),
+            }     
+    
+    filename = "dev4910_demods_0_sample_r_avg_00000.csv"
+    outputprocess = OutputProcessor(filename,scan_pars,daq_pars)
+    
+    def test_initialization_scan_pars(self):
+        """Tests that when an OutputProcessor object is instantiated, the attributes inizialization
+        through the __init__ method is correct"""
+        assert self.scan_pars == self.outputprocess.scan_pars
+        assert self.filename == self.outputprocess.filename
+        assert self.daq_pars["daq_columns"] == self.outputprocess.N_cols
+        assert self.daq_pars["daq_rows"] == self.outputprocess.N_rows
         
+    def test_raw_data_shape(self):
+        """Tests that when an OutProcessor object is instantiated and get_raw_data is called,
+        the returned NumPy has the correct number of rows"""
+        raw_data = np.genfromtxt(self.filename,skip_header = 1, delimiter = ";")
+        returned_column = self.outputprocess.get_raw_data()
+        assert raw_data.shape[0] == returned_column.shape[0]
+
+    def test_raw_data_values(self):
+        """Tests that when an OutProcessor object is instantiated and get_raw_data is called,
+        the returned NumPy has the same values of the original one."""
+        # find raw data column directly, select only non nan values
+        raw_data = np.genfromtxt(self.filename,skip_header = 1, delimiter = ";")
+        raw_column = raw_data[:,2]
+        raw_column_not_nan = raw_column[~np.isnan(raw_column)]
+        # find raw data through get_raw_data, select only non nan values
+        returned_column = self.outputprocess.get_raw_data()
+        returned_column_not_nan = returned_column[~np.isnan(returned_column)]
+        assert all(abs(raw - returned)/raw <= 1e-8 for raw, returned in zip(raw_column_not_nan,returned_column_not_nan))
+    
+    def test_dimension_averaged_subintervals_is_rows(self):
+        """Tests tat when an OutputProcessor object is instantiated and evaluate_averaged_data is called, 
+        the dimension of the returned array (with averaged subintervals) is equal to the 
+        number of rows"""
+        returned_column = self.outputprocess.get_raw_data()
+        avg_returned_column = self.outputprocess.evaluate_averaged_data(returned_column)
+        N_rows_avg = len(avg_returned_column)
+        assert self.daq_pars["daq_rows"] == N_rows_avg
+        
+    
+    def test_average_data(self):
+        """Tests that when an OutputProcessor object is instantiated and evaluate_average_data
+        is called, the average of the averaged subintervals (of N_cols dimensions) is equal to the
+        average of the overall raw_data. This is justified by subintervals of equal dimension"""
+        # find raw data column directly, select only non nan values
+        raw_data = np.genfromtxt(self.filename,skip_header = 1, delimiter = ";")
+        raw_column = raw_data[:,2]
+        raw_column_not_nan = raw_column[~np.isnan(raw_column)]
+        # find raw data through get_raw_data, select only non nan values
+        returned_column = self.outputprocess.get_raw_data()
+        returned_column_not_nan = returned_column[~np.isnan(returned_column)]        
+        # average subintervals of returned_column_not_nan
+        avg_returned_column = self.outputprocess.evaluate_averaged_data(returned_column_not_nan)
+        avg_raw= np.mean(raw_column_not_nan)
+
+        # average averaged subintervals of returned_column_not_nan
+        avg_avg_returned = np.mean(avg_returned_column)
+          
+        assert isclose(avg_avg_returned,avg_raw,rel_tol = 1e-12)
+        
+    def test_dimension_target_positions(self):
+        """Tests that when an instance of OutputProcessor is created and evaluate_target_position is called,
+        the dimension of the targets array is correct."""
+        scanedges = self.scan_pars["scan_edges"]
+        stepsize = self.scan_pars["stepsize"]
+        targets = self.outputprocess.evaluate_target_positions(scanedges,stepsize)
+        N_targets = 301
+        assert N_targets == len(targets)
+        
+    def test_values_target_positions(self):
+        """Tests that when an instance of OutputProcessor is created and evasluate_target_position is called,
+        the first and the last point of the target array is corrected"""
+        scanedges = self.scan_pars["scan_edges"]
+        stepsize = self.scan_pars["stepsize"]
+        targets = self.outputprocess.evaluate_target_positions(scanedges,stepsize)
+
+        assert isclose(scanedges[0],targets[0],rel_tol = 1e-8)
+        assert isclose(scanedges[1],targets[-1],rel_tol = 1e-8)  # by induction is right because of linspace
+
+    
+    def test_save_data_file(self):
+        """Tests that when an instance of OutputProcessor is created and save_data_file  is called, 
+        an output file named "cleaned_1D_data.txt" is indeed saved in the current folder"""
+        # create fictitious targets 
+        targets  = np.array([1,2,3,4,5],dtype=float)
+        # create fictitious signal values
+        avg_val = np.random.random(size = len(targets))
+        # save file to "cleaned_1D_data.txt"
+        self.outputprocess.save_data_file(targets,avg_val)
+        # expected output
+        expected_output = ''
+        for i in range(len(targets)):
+            expected_output += '\b'+str(targets[i])+', '+'{:.6f}'.format(avg_val[i])+'\n'
+
+        # Read the file contents and compare with expected output
+        with open("cleaned_1D_data.txt", "rb") as f:
+            assert f.read(),expected_output
