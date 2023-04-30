@@ -25,7 +25,7 @@ class OutputProcessor():
 
     def get_raw_data(self):
         """
-        Read raw data from the file and return the third column, containing the values of the measured signal.
+        Read raw data from the outputfile and return the third column, containing the values of the measured signal.
 
         Returns:
         - raw_data (ndarray): a NumPy array containing the third column of the input file
@@ -35,7 +35,8 @@ class OutputProcessor():
     
     def evaluate_averaged_data(self,raw_data): 
         """
-        Average the input data in case of a 1D discrete scan.
+        Average the input data in case of a 1D discrete scan. Raw data is divided ini chunck of dimension N_cols, 
+        over which an average is performed. Output avg_data is in one to one relation with the spatial coordinates.
 
         Args:
         - raw_data (ndarray): a NumPy array containing the raw data
@@ -65,7 +66,7 @@ class OutputProcessor():
 
     def save_data_file(self,targets,avg_data):         
         """
-        Save the cleaned 1D data to a file.
+        Save the cleaned 1D data to a file named "cleaned_1D_data.txt".
 
         Args:
         - targets (ndarray): a NumPy array containing the target positions
@@ -77,7 +78,7 @@ class OutputProcessor():
 
     def save_processed_data(self):
         """
-        Process the 1D data and save it to a file.
+        Process the 1D data, averaging it if necessary (discrete scan), and save it to a file named "cleaned_1D_data.txt".
         """
         # get targets position
         scanedges = self.scan_pars["scan_edges"]
