@@ -10,7 +10,8 @@
 	"pi" : 
 		{	"ID":"C-663",
             "stage_ID": "L-406.40SD00",
-            "refmode": "FNL"
+            "refmode": "FNL",
+			"trig_type" : 6
 		}
 }
 			
