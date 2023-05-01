@@ -12,7 +12,7 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name="pizur-scanner",
+    name="pizurscan",
     version="0.1.1",
     description="Library to interface PI controllers and Zurich lock-in",
     long_description=long_description,
@@ -32,7 +32,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Operating System :: Microsoft :: Windows"
     ],
-    packages=["pizur-scanner"],
+    packages=["pizurscan"],
     include_package_data=True,
     install_requires=["numpy","json","math"]
 )
