@@ -1,11 +1,10 @@
-from PI_commands import Stepper
-from Scanners import Scan1D
-from InputProcessor import InputProcessor
+from pizurscan.PI_commands import Stepper
+from pizurscan.Scanners import Scan1D
+from pizurscan.InputProcessor import InputProcessor
 from pipython import pitools,GCS2Commands,GCSDevice
-from OutputProcessor import OutputProcessor
+from pizurscan.OutputProcessor import OutputProcessor
 from math import isclose
 import numpy as np 
-from numpy.random import random
 
 class TestStepper:
     stepper = Stepper('C-663', 'L-406.40SD00')
