@@ -20,6 +20,7 @@ class TestStepper:
         properly assigned."""
         controller = 'C-663'
         axis = 'L-406.40SD00'
+        # make id of controller and axis attributes
         assert self.stepper.controller_id == controller
         assert self.stepper.axis_id == axis
             
