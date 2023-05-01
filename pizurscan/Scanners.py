@@ -22,7 +22,6 @@ class Scan1D:
         self.scan_pars = InPars["scan_pars"]
         self.scan_edges = self.scan_pars["scan_edges"]
         self.stepsize = self.scan_pars["stepsize"]
-        # evaluate target positions for the 1D scan
         self.targets = self.evaluate_target_positions()
         self.stepper = Stepper(self.PI["ID"],self.PI["stage_ID"]) 
 
