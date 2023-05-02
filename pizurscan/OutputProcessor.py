@@ -19,7 +19,7 @@ class OutputProcessor():
         - N_cols (int): the number of columns in the DAQ data
         """
         self.scan_pars = scan_pars
-        self.filename = filename
+        self.filename = "output/"+filename
         self.N_rows = daq_pars["daq_rows"]
         self.N_cols = daq_pars["daq_columns"]
 

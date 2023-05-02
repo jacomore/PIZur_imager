@@ -1,4 +1,4 @@
-from pizurscan.PI_commands import Stepper
+from PI_commands import Stepper
 import numpy as np
 
 class Scanner:
@@ -115,6 +115,7 @@ class Scanner:
             self.stepper.move_stage_to_target(target)        
             print("Position: ", target)
             cur_pos.append(self.stepper.get_curr_pos())
+        self.stepper.close_connection()
         return cur_pos
 
     
@@ -122,5 +123,7 @@ class Scanner:
         """
         Execute the continuous scan by moving the axis to the last position.
         """
-        self.stepper.move_stage_to_target(self.targets[-1])        
+        self.stepper.move_stage_to_target(self.targets[-1])    
+        self.stepper.close_connection()
+    
         
