@@ -2,3 +2,16 @@
 
 pizurscan
 =============
+| The aim of this code is to increase the accessibility of a newly experimental apparatus that was developed for the `DIFA <https://fisica-astronomia.unibo.it/it/index.html>`_ (Dipartimentimento di Fisica ed Astronomia) at University of Bologna. In particular, the code aims at controlling the `Stepper Motor Controller <https://www.physikinstrumente.com/en/products/controllers-and-drivers/motion-controllers-drivers-for-linear-torque-stepper-dc-servo-motors/c-66312-mercury-step-stepper-motor-controller-900553/>`_ by Physik Instrumente (PI) and interface it with the `Zhinst Lock-in <https://www.zhinst.com/europe/it/products/mfli-lock-in-amplifier>`_ to perform one-dimensional spatial scan with the spatial resolution down to 0.5 µm. 
+
+| The Stepper motor controller is connected to a servo motor that moves a stage issued on an mechanical axis. For every movement of the stage, a square-wave trigger signal can be provided by the controller. This signal is then used by the lock-in to trigger data acquisition of an external signal, which is correlated with the position of the stage. An example of application is a spatially-resolved measurements of the quantum efficiency of a solar cell over a line profile. 
+
+| *pizurscan* simplifies the interaction between the two instruments with the following three features:
+#. *Input Processing*: input parameters defining the trajectory and the cinematics of the PI stage are processed to evaluate the parameters that must be provided to the data acquisition (DAQ) of the Zhinst Lock-in. 
+#. *Scan execution*: the axis is directly controlled by pizurscan through the API `PIPython <https://pypi.org/project/PIPython/>`_. In particular, the user perform continuous and discrete scas: in the first the stage moves continuously from the starting point to the final position, while in the second small micrometric steps are performed, resting in fixed position for around 50 ms. 
+#. *Output Processing*: When the trigger signal of the PI controller triggers the acquisition, the external signal is measured by the lock-in and the DAQ integrates data over the acquisition time. Depending on the DAQ parameters evaluated with *Input Processing*, data outputted by the DAQ are further processed (integrated) so that eventually a single value of external signal is associated with the position of the stage.
+
+| Accordingly, the code defines four main classes: ``InputProcessor``, ``Stepper``, ``Scanner`` and ``OutputProcessor``. Such an OOP structure makes the three features described above one independent from the others, so that one could potentially use only one/two of them. For instance, if raw data were previously acquired, one can use only the first and the last class for processing output data. Indeed, the roles of ``InputProcessor`` and ``OutputProcessor`` are the previously in point 1 and 3.
+| ``Stepper`` is the lower-level interface: it makes use of the PIPYthon API and is directly interfaced with the PI controllers. ``Scanner`` instantiates ``Stepper`` and combines the inherited methods for easing the overall handling of the controller connection and scanning procedures. In this way, the user does not need any knowledge of the PIPYthon library. 
+
+| Code is developed by Giacomo Rizzi (`<rizzigiacomo@pm.me>`_). Have fun and do good measurements!
