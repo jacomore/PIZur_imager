@@ -4,6 +4,16 @@ pizurscan API Reference
 Modules
 ----------
 
+
+pizurscan.InputValidator module
+---------------------------------
+
+.. automodule:: pizurscan.InputValidator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 pizurscan.InputProcessor module
 -------------------------------
 
@@ -35,4 +45,5 @@ pizurscan.Scanner module
    :members:
    :undoc-members:
    :show-inheritance:
+
 

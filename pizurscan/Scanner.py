@@ -1,4 +1,4 @@
-from PI_commands import Stepper
+from pizurscan.PI_commands import Stepper
 import numpy as np
 
 class Scanner:

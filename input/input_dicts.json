@@ -1,8 +1,8 @@
 {	"scan_pars" :
 		{			
-			"type": "continous",
-			"scan_edges": [83.6,84.8],
-            "stepsize" : 0.001,
+			"type": "discrete",
+			"scan_edges": [10,100],
+            "stepsize" :5,
 			"velocity" : 10,
 			"acceleration" : 20,
 			"sampling_freq" : 1.67e3

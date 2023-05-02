@@ -7,7 +7,7 @@ Welcome to pizurscan's documentation!
 =====================================
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 10
    :caption: caption
 
    Introduction/intro      
