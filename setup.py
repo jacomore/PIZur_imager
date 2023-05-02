@@ -34,5 +34,5 @@ setup(
     ],
     packages=["pizurscan"],
     include_package_data=True,
-    install_requires=["numpy","json","math"]
+    install_requires=["numpy"]
 )
