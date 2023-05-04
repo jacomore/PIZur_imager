@@ -469,6 +469,10 @@ class TestOutputProcessor:
             
         
 class TestInputValidator:
+    """ A class to test that when invalid input scan parameters are inserted, an exeption is raised and the code stops the execution. 
+     Although a lower-level control is already present in the internal PI subroutines, it takes time to be activated. 
+     Therefore, this additional entrance control find out invalid inputs without the need of connecting to the PI instrument. 
+    """
 
     scanPars = {		
         "type": "discrete",
@@ -481,7 +485,6 @@ class TestInputValidator:
     
     
     inputval = InputValidator(scan_pars=scanPars)
-        
       
     def test_valid_input(self):
         """Tests that when an InputValidator class is instantiated and corrected values of scan parameters
