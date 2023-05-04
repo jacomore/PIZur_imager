@@ -1,8 +1,10 @@
 from pizurscan.PI_commands import Stepper
-from pizurscan.Scanners import Scan1D
+from pizurscan.Scanner import Scanner
 from pizurscan.InputProcessor import InputProcessor
 from pipython import pitools,GCS2Commands,GCSDevice
 from pizurscan.OutputProcessor import OutputProcessor
+from pizurscan.InputValidator import InputValidator
+import pytest as pytest
 from math import isclose
 import numpy as np 
 
@@ -270,7 +272,7 @@ class TestScanners:
 		    }
             }
     
-    scanner = Scan1D(inPars)
+    scanner = Scanner(inPars)
     
     def test_initialization_pars(self):
         """Tests that when an instance of Scan1D is created, the inizialitation of the 
@@ -464,3 +466,59 @@ class TestOutputProcessor:
         # Read the file contents and compare with expected output
         with open("cleaned_1D_data.txt", "rb") as f:
             assert f.read(),expected_output
+            
+        
+class TestInputValidator:
+
+    scanPars = {		
+        "type": "discrete",
+        "scan_edges": [0,1],
+        "stepsize" : 0.1,
+        "velocity" : 1,
+        "acceleration" : 1,
+        "sampling_freq" : 100
+        }
+    
+    
+    inputval = InputValidator(scan_pars=scanPars)
+        
+      
+    def test_valid_input(self):
+        """Tests that when an InputValidator class is instantiated and corrected values of scan parameters
+        are provided, the validate method does not raise any error and return True."""
+        assert self.inputval.validate() == True
+
+    def test_invalid_type(self):
+        """Tests that when an InputValidator class is instantiated and an invalid value of 'type' is passed 
+        to the validate_type function, an exception is raised."""
+        self.inputval.type = "invalid"
+        with pytest.raises(ValueError):
+            self.inputval.validate_type()
+
+    def test_invalid_scan_edges(self):
+        """ Tests that when an InputValidator class is instantiated an invalid value of 'scan_edges' is passed 
+        to the validate_scan_edges function, an exception is raised """
+        self.inputval.scan_edges = [-10, 110]
+        with pytest.raises(ValueError):
+            self.inputval.validate_scan_edges()
+    
+    def test_invalid_stepsize(self):
+        """ Tests that when an InputValidator class is instantiated an invalid value of 'stepsize' is passed 
+        to the validate_stepsize function, an exception is raised """
+        self.inputval.stepsize = 200
+        with pytest.raises(ValueError):
+            self.inputval.validate_stepsize()
+
+    def test_invalid_velocity(self):
+        """ Tests that when an InputValidator class is instantiated an invalid value of 'velocity' is passed 
+        to the validate_velocity function, an exception is raised """
+        self.inputval.velocity = -5
+        with pytest.raises(ValueError):
+            self.inputval.validate_velocity()
+
+    def test_invalid_acceleration(self):
+        """ Tests that when an InputValidator class is instantiated an invalid value of 'acceleration' is passed 
+        to the validate_velocity function, an exception is raised """
+        self.inputval.acceleration = 30
+        with pytest.raises(ValueError):
+            self.inputval.validate_acceleration()
