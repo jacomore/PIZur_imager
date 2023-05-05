@@ -33,7 +33,7 @@ Python 3.6 or later is required.
 
 There are several ways to install the module:
 
-1. The simplest way is to run either of these commands: pip install pizurscan or pip install --upgrade raytracing. If you need to install pip, download getpip.py and run it with python getpip.py.
+1. The simplest way is to run either of these commands: pip install pizurscan or pip install --upgrade pizurscan. If you need to install pip, download getpip.py and run it with python getpip.py.
 2. If you download the source of the module, then you can type: python setup.py install.
 3. From Github, you can get the latest version and then type python setup.py install.
 4. If you are completely lost, copying the folder pizurscan (the one that includes "init.py") from the source file into the same directory as your own script will work.

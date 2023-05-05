@@ -14,7 +14,7 @@ Installing and upgrading
 | Python 3.6 or later is required. 
 
 | There are several ways to install the module:
-#. Simplest: ``pip install pizurscan`` or ``pip install --upgrade raytracing``. If you need to install pip, download getpip.py and run it with python getpip.py.
+#. Simplest: ``pip install pizurscan`` or ``pip install --upgrade pizurscan``. If you need to install pip, download getpip.py and run it with python getpip.py.
 #. If you download the `source <https://pypi.org/project/pizurscan/#files>`_ of the module, then you can type: ``python setup.py install``.
 #. From `Github <https://github.com/jacomore/PIZur_imager.git>`_, you can get the latest version and then type ``python setup.py install``.
 #. If you are completely lost, copying the folder pizurscan (the one that includes "__init__.py") from the source file into the same directory as your own script will work.
