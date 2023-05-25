@@ -48,18 +48,46 @@ class Stepper:
     
     def connect_pidevice(self):
         """
-        Activates an I/O interface to select the device of interest among the plugged ones.
-        Accepts a user input with the index of the device to interest and connects to it.
+        Finds the plugged devices, activates the I/O interface to select the device of interest and 
+        eventually connects to the selected device.        
         """
         devices = self.usb_plugged_devices()
         if not devices:
             raise Exception("There are no plugged devices! Please connect at least one device.")
+
+        selected_device = self.select_device(devices)
+        self.connect_device(selected_device)
+
+    def select_device(self, devices):
+        """
+        Displays the list of devices and prompts the user to select one.
+        
+        Parameters
+        ----------
+        devices : list
+            List object with the connected devices (as strings)
+        
+        Returns:
+        --------
+        A string object with the name of the pi device to be connected.
+        """
         for i, device in enumerate(devices):
             print('Number ---- Device')
             print(f'{i}      ----  {device}')
-        # I/O for device selection
+
         item = int(input('Input the index of the device to connect: '))
-        self.pidevice.ConnectUSB(devices[item])
+        return devices[item]
+
+    def connect_device(self, device):
+        """
+        Connects to the specified device.
+        
+        Parameters
+        ----------
+        device : str
+            A string object with the name of the pi device to be connected.
+        """
+        self.pidevice.ConnectUSB(device)
         pitools.startup(self.pidevice, self.axis_id)
         
     def move_stage_to_ref(self, refmode):
