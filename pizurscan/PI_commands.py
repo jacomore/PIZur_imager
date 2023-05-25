@@ -149,8 +149,8 @@ class Stepper:
         self.pidevice.MOV(self.pidevice.axes,target)
         pitools.waitontarget(self.pidevice)
 
-    def configure_out_trigger(self, trigger_type):
-        """Configures and sets the output trigger for a given axis.
+    def activate_out_trigger(self, trigger_type):
+        """Configures and activate the output trigger for a given axis.
         
         Parameters
         ----------
@@ -161,6 +161,19 @@ class Stepper:
         self.pidevice.CTO(1, 3, trigger_type)
         # enable trigger output with the configuration defined above
         self.pidevice.TRO(1, True)
+        
+    def disable_out_trigger(self, trigger_type):
+        """Configures and disable the output trigger for a given axis.
+        
+        Parameters
+        ----------
+        trigger_type : int
+            Type of trigger to be output (6 == in Motion, 1 = Line trigger).
+        """
+        self.pidevice.CTO(1, 2, 1)
+        self.pidevice.CTO(1, 3, trigger_type)
+        # disable trigger output with the configuration defined above
+        self.pidevice.TRO(1, False)
         
     def close_connection(self):
         """
