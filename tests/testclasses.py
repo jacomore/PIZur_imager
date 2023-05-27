@@ -262,7 +262,6 @@ class TestScanners:
         """Setup any state tied to the execution of the given method in a class.
         `setup_method` is invoked for every test method of a class.
         """
-        self.scanner = Scanner()
         self.inPars = {
             "scan_pars" : {		
                 "type": "discrete",
@@ -279,6 +278,8 @@ class TestScanners:
                 "trig_type":6
                 }
                 }
+        self.scanner = Scanner(self.inPars)
+
     
     def teardown_method(self, method):
         """teardown any state that was previously setup with a setup_method
