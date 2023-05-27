@@ -95,10 +95,7 @@ class Scanner:
             The traceback object related to the exception, if any. None if no exception occurred.
         """
         self.stepper.close_connection()  # Close the connection with the pidevice
-        if exc_type is not None:
-            print(f"Exception type: {exc_type}")
-            print(f"Exception value: {exc_value}")
-            print(f"Traceback: {traceback}")
+
 
     def __connect_stepper(self):
         """
