@@ -70,9 +70,9 @@ class Stepper:
         Returns:
         --------
         A string object with the name of the pi device to be connected.
-        """
+        """            
+        print('Number ---- Device')
         for i, device in enumerate(devices):
-            print('Number ---- Device')
             print(f'{i}      ----  {device}')
 
         item = int(input('Input the index of the device to connect: '))
