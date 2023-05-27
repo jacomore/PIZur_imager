@@ -112,8 +112,10 @@ class Scanner:
         and acceleration. 
         """
         # Set high default values to obtain quick referencing
-        self.stepper.set_velocity(10)
-        self.stepper.set_acceleration(20)
+        max_vel = 10    # mm/s
+        max_acc = 20    # mm/s^2
+        self.stepper.set_velocity(max_vel)
+        self.stepper.set_acceleration(max_acc)
         self.stepper.move_stage_to_ref(self.PI["refmode"])
         
     def evaluate_target_positions(self):
@@ -131,7 +133,7 @@ class Scanner:
         """
         Stores input velocity, acceleration, and trigger type in the ROM of the device.
         """
-        self.stepper.activate_out_trigger(trigger_type=self.PI["trig_type"])
+        self.stepper.enable_out_trigger(trigger_type=self.PI["trig_type"])
         self.stepper.set_velocity(self.scan_pars["velocity"])
         self.stepper.set_acceleration(self.scan_pars["acceleration"])
         

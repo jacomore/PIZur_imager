@@ -56,7 +56,7 @@ class Stepper:
             raise Exception("There are no plugged devices! Please connect at least one device.")
 
         selected_device = self.select_device(devices)
-        self.connect_device(selected_device)
+        self.startup_USB_device(selected_device)
 
     def select_device(self, devices):
         """
@@ -78,7 +78,7 @@ class Stepper:
         item = int(input('Input the index of the device to connect: '))
         return devices[item]
 
-    def connect_device(self, device):
+    def startup_USB_device(self, device):
         """
         Connects to the specified device.
         
@@ -177,7 +177,7 @@ class Stepper:
         self.pidevice.MOV(self.pidevice.axes,target)
         pitools.waitontarget(self.pidevice)
 
-    def activate_out_trigger(self, trigger_type):
+    def enable_out_trigger(self, trigger_type):
         """Configures and activate the output trigger for a given axis.
         
         Parameters
