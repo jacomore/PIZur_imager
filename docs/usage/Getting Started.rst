@@ -27,14 +27,16 @@ Getting Started
 In the most general case, one would like to exploit all of the three features of pziruscan, namely input processing, scanning execution and output processing. To do so, the packages are imported as follows: 
 
 .. code-block:: python
-    :linenos:
+    :lineno-start: 1
 
-    from pizurscan.InputProcessor import InputProcessor
+    from pizurscan.InputValidator import input_validator
+    from pizurscan.InputProcessor import evaluate_daq_pars
     from pizurscan.Scanner import Scanner 
-    from pizurscan.OutputProcessor import OutputProcessor
-    import json
+    from pizurscan.OutputProcessor import save_processed_data
+    import keyboard
 
-Note that importing `json <https://docs.python.org/3/library/json.html>`_ is crucial to upload input parameters that are stored "*input_dicts.json*". An example of such a file is herein reported: 
+The ``keyboard`` is optional and is used for pausing the program while writing the parameters in the DAQ pars.  
+The `json <https://docs.python.org/3/library/json.html>`_ file "*input_dicts.json*" comprises two dictionaries; **scan_pars** and **pi**, which define respectively the parameters of the scan, such as the edges or the cinematic, and the parameters associated with PI instrument. 
 
 .. _jsonfile:
 .. code-block:: json
@@ -57,11 +59,8 @@ Note that importing `json <https://docs.python.org/3/library/json.html>`_ is cru
         "refmode": "FNL",
         "trig_type" : 6
 		}
-    }
-
-
-| As it can be seen, two python dictionaries are defined, **scan_pars** and **pi**, which defines respectively the parameters of the scan, such as the edges or the cinematic, and the parameters associated with PI instrument. 
-
+    } 
+    
 In particular, here a more detailed explanation of the parameter is provided:
 
 #. **"scan_pars"**:
@@ -80,43 +79,46 @@ In particular, here a more detailed explanation of the parameter is provided:
     * *refmode*:  ``str`` object defining the edge reference of the PI stage is performed. It can be either *"FNL"* for refering at negative edge, i.e 0, or *"FPL"* for referencing at positive edge, i.e 102. 
     * *trig_type*:  ``int`` object defining the type of triggering to use. If set to 0, then a **line trigger** is produced by the PI controller every time the stage reaches a target position. However, the type of trigger upon which this software is developed is the 6. In this modality, every time the stage is motion, the trigger is **high**, whereas it goes **down** as soon as the stage stops. Therefore, when the *type* of scan_pars is not "continuous", the DAQ trigger on the positive edge (when the stage starts moving), while in "discrete" it triggers on the negative edge (when it stops in a position).
 
-At this point, the *"input_dicts.json"* can be imported in the following way: 
+The import of *"input_dicts.json"* can be readily through the *input_validator* function, that not only transforms the entries of the "input_dicts.json" file into a Python dictionary, but also validates the compatibility/correctness of the input values. The import is performed as: 
 
 .. code-block:: python
-   :lineno-start: 1
 
-    openPars = open('../input/input_dicts.json')
-    inpars = json.load(openPars)
+   :lineno-start: 1
+    inpars = input_validator()
     scan_pars = inpars["scan_pars"]
 
 Note that *scan_pars* can be easily selected because it is the value of the key *"scan_pars"* of inpars. 
-| Let's now see how to use InputProcessor:
+| The function *evaluate_daq_pars* of the module InputProcessor processes the *scan_pars* extracted from the *inPars* dictionary and returns the parameters that should be input in the DAQ (data acquisition) tab of the Zurich lock-in. This is performed as follows:
 
 .. code-block:: python
    :lineno-start: 1
-
-    ip = InputProcessor(scan_pars)
-    daq_pars = ip.evaluate_daq_pars()
+   
+    daq_pars = evaluate_daq_pars(scan_pars)
     print("Data Acquisition parameters:")
     for k, v in daq_pars.items():
         print(k+": ", v)
 
-the method ``evaluate_daq_part`` is called on the instantiated object **ip** and directly returns a dictionary with the DAQ parameters (daq_pars), which is printed on the terminal. At that point, one may want to insert these parameters in the DAQ of the lock-in, which could take some time. A valid solution is to define a function for producing a pausing I/O interface: 
+At that point, one may want to insert these parameters in the DAQ of the lock-in, which could take some time. A valid solution is to define a function for producing a pausing I/O interface: 
 
 .. _pausefunc:
 .. code-block:: python
    :lineno-start: 1
 
     def press_any_key_to_continue():
-        print("Press any key to continue, or ESC to exit.")
+        """
+        Pauses the program execution until the user presses any key.
+        If the ESC key is pressed, the program terminates.
+        """
+        print("Program is pausing: when you're done working on the Zurich lock-in, press any key to continue, or ESC to exit.")
+        print("Waiting for user input...")
         while True:
-            key = keyboard.read_event()
+            pressed_key = keyboard.read_event()
             try:
-                if key.name == 'esc':
-                    print("\nyou pressed Esc, so exiting...")
+                if pressed_key.name == 'esc':
+                    print("\nYou pressed ESC, so exiting...")
                     sys.exit(0)
                 else:
-                    print("Continuing program...")      
+                    print("Continuing program...")
                     break
             except:
                 break
@@ -127,27 +129,22 @@ Now everything is ready for performing the desired scan. Let's suppose that one 
 .. code-block:: python
    :lineno-start: 1
 
-   scanner = Scanner()
-   scanner.connect_stepper()    # connect to PI device
-   scanner.setup_motion_stepper()   # write velocity and acceleration in ROM
-   scanner.init_stepper_scan()  # reference axis and move to first target position
-   scanner.continuous_discrete_scan()  # perform discrete one dimensional scan
-
+    with Scanner(inpars) as scanner:
+        scanner.execute_continuous_scan()
 
 | If instead a discrete has to be executed the method *execute_continuous_scan* must be replaced with *execute_discrete_scan*. Easy, no?
 
 | Last feature of pizurscan regards processing data outputted by the Zurich DAQ. With regards to that points, it must be noted that Zurich processes information through a Data server that runs on the instruments. For that reasons, data are not straightforward to extract in an automated matter. Therefore, **to process a certain output file, it is necessary to move/copy it into the folder *output*, where it is also saved the "cleaned" data file at the end of the output processing stage**. For this reason, in order for the data to be ready, it is necessary to call once again the function :ref:`press_any_key_to_continue <pausefunc>`. 
 
-When the file is copied, the following code can be execute: 
+When the file is copied, the following statement can be execute: 
 
 
 .. code-block:: python
    :lineno-start: 1
 
-    op = OutputProcessor(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
+    save_processed_data(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
                         scan_pars = scan_pars,
                         daq_pars = daq_pars)
 
-    op.save_processed_data()
 
 and that's it, folks! The overall example can be found in :ref:`Documents & Examples <Doc&Ex>`

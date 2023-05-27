@@ -20,36 +20,21 @@ Example 1: Scan execution
    :lineno-start: 1
 
     from Scanner import Scanner
-    from pizurscan.InputValidator import InputValidator
-    import json 
-    import sys
-
-    # open and read scan parameters
-    openPars = open('../input/input_dicts.json')
-    inpars = json.load(openPars)
-    scan_pars = inpars["scan_pars"]
-
-    # validate input data
-    inputvalidator = InputValidator(scan_pars)
-    try:
-        inputvalidator.validate()
-    except ValueError:
-        print("Closing program ...")
-        sys.exit()
+    from pizurscan.InputValidator import input_validator
+    
+    # extract and validate input data
+    inpars = input_validator()
 
     # instantiate the Scanner object
-    scanner = Scanner(inpars) 
-    scanner.connect_stepper()    # connect to PI device
-    scanner.setup_motion_stepper()   # write velocity and acceleration in ROM
-    scanner.init_stepper_scan()
-    try: 
-        if scan_pars["type"] == "continuous":
-            scanner.execute_continuous_scan()
-        else:
-            scanner.execute_discrete_scan()
-    except KeyboardInterrupt:
-        scanner.stepper.close_connection()
-        print("Scan execution interrupted: closing program ...")
+    with Scanner(inpars) as scanner:
+        try: 
+            if scan_pars["type"] == "continuous":
+                scanner.execute_continuous_scan()
+            else:
+                scanner.execute_discrete_scan()
+        except KeyboardInterrupt:
+            scanner.stepper.close_connection()
+            print("Scan execution interrupted: closing program ...")
 
 
 Example 2: Data processing
@@ -64,115 +49,83 @@ are still necessary for the InputProcessor class.
 .. code-block:: python
    :lineno-start: 1
 
-    from Scanner import Scanner
-    from InputValidator import InputValidator
-    import json 
-    import sys
+    from InputValidator import input_validator
+    from InputProcessor import evaluate_daq_pars
+    from OutputProcessor import save_processed_data 
 
-    # open and read scan parameters
-    openPars = open('../input/input_dicts.json')
-    inpars = json.load(openPars)
-    scan_pars = inpars["scan_pars"]
+    # extract and validate input data
+    inpars = input_validator()
 
-    # validate input data
-    inputvalidator = InputValidator(scan_pars)
-    try:
-        inputvalidator.validate()
-    except ValueError:
-        print("Closing program ...")
-        sys.exit()
+    # process scan_pars to find the daq_pars
+    daq_pars = evaluate_daq_pars(inpars["scan_pars"])
 
-    # instance the input processor for evaluating daq parameters
-    ip = InputProcessor(scan_pars)
-    daq_pars = ip.evaluate_daq_pars()
-    print("Data Acquisition parameters:")
-    for k, v in daq_pars.items():
-        print(k+": ", v)
-
-    # instance output processor and save output data
-    op = OutputProcessor(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
+    # process data that are outputted by Zurich-lock in and saved into the output folder
+    save_processed_data(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
                          scan_pars = scan_pars,
                          daq_pars = daq_pars)
-
-    op.save_processed_data()
-
-
 
 
 Example 3: Scan execution and data processing
 ----------------------------------------------
-#. Compile the :ref:`input_dicts <jsonfile>` with the appropriate scan parameters
+#. Compile the :ref:`input_dicts <jsonfile>` with the appropriate input parameters
 #. Create a script file in the package folder ("pizurscan/pizurscan") with the :ref:`Code 3 <ex3>`. 
 
 .. _ex3:
 .. code-block:: python
    :lineno-start: 1
 
-    from Scanner import Scanner
     from InputValidator import InputValidator
+    from Scanner import Scanner
+    from InputProcessor import evaluate_daq_pars
+    from OutputProcessor import save_processed_data
     import json 
     import sys
 
     def press_any_key_to_continue():
-    print("Press any key to continue, or ESC to exit.")
-    while True:
-        key = keyboard.read_event()
-        try:
-            if key.name == 'esc':
-                print("\nyou pressed Esc, so exiting...")
-                sys.exit(0)
-            else:
-                print("Continuing program...")
+        """
+        Pauses the program execution until the user presses any key.
+        If the ESC key is pressed, the program terminates.
+        """
+        print("Program is pausing: when you're done working on the Zurich lock-in, press any key to continue, or ESC to exit.")
+        print("Waiting for user input...")
+        while True:
+            pressed_key = keyboard.read_event()
+            try:
+                if pressed_key.name == 'esc':
+                    print("\nYou pressed ESC, so exiting...")
+                    sys.exit(0)
+                else:
+                    print("Continuing program...")
+                    break
+            except:
                 break
-        except:
-            break
 
-    # open and read scan parameters
-    openPars = open('../input/input_dicts.json')
-    inpars = json.load(openPars)
-    scan_pars = inpars["scan_pars"]
+    # extract and validate input data
+    inpars = input_validator()
 
-    # validate input data
-    inputvalidator = InputValidator(scan_pars)
-    try:
-        inputvalidator.validate()
-    except ValueError:
-        print("Closing program ...")
-        sys.exit()
-
-    # instance the input processor for evaluating daq parameters
-    ip = InputProcessor(scan_pars)
-    daq_pars = ip.evaluate_daq_pars()
-    print("Data Acquisition parameters:")
+    # process scan_pars to find the daq_pars
+    daq_pars = evaluate_daq_pars(inpars["scan_pars"])
     for k, v in daq_pars.items():
-        print(k+": ", v)
-    
-    # wait time for writing parameters in the DAQ of the lock-in
-    print("Please, now type the daq parameters into the DAQ of the Zurich lock ...")
+    print(k+": ", v)
+
     press_any_key_to_continue()
 
     # instantiate the Scanner object
-    scanner = Scanner(inpars) 
-    scanner.connect_stepper()    # connect to PI device
-    scanner.setup_motion_stepper()   # write velocity and acceleration in ROM
-    scanner.init_stepper_scan()
-    try: 
-        if scan_pars["type"] == "continuous":
-            scanner.execute_continuous_scan()
-        else:
-            scanner.execute_discrete_scan()
-    except KeyboardInterrupt:
-        scanner.stepper.close_connection()
-        print("Scan execution interrupted: closing program ...")
+    with Scanner(inpars) as scanner:
+        try: 
+            if scan_pars["type"] == "continuous":
+                scanner.execute_continuous_scan()
+            else:
+                scanner.execute_discrete_scan()
+        except KeyboardInterrupt:
+            scanner.stepper.close_connection()
+            print("Scan execution interrupted: closing program ...")
 
-
-    print("Please, now move the file outputted by the Zurich DAQ into the 'output' folder ...")
     press_any_key_to_continue()
 
-    # instance output processor and save output data
-    op = OutputProcessor(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
+    # process data that are outputted by Zurich-lock in and saved into the output folder
+    save_processed_data(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
                          scan_pars = scan_pars,
                          daq_pars = daq_pars)
-
-    op.save_processed_data()
+                         
     print("Scan data are saved to 'output/cleaned_1D_data.txt'. Closing the program ...")
