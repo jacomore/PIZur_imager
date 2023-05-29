@@ -69,7 +69,7 @@ def save_processed_data(filename, scan_pars, daq_pars):
     - daq_pars (dict): A dictionary containing data acquisition parameters.
     """
     # extract input values
-    filename = "input/" + filename
+    filename = "../output/" + filename
     N_rows = daq_pars["daq_rows"]
     N_cols = daq_pars["daq_columns"]
 
