@@ -54,7 +54,7 @@ def save_data_file(targets, avg_data):
     - targets (ndarray): A NumPy array containing the target positions.
     - avg_data (ndarray): A NumPy array containing the averaged data.
     """
-    out_name = "output/cleaned_1D_data.txt"
+    out_name = "../output/cleaned_1D_data.txt"
     out_file = np.column_stack((targets, avg_data))
     np.savetxt(out_name, out_file, fmt="%10.6f", delimiter=",")
 
