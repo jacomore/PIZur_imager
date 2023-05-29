@@ -155,7 +155,7 @@ class Scanner:
         for target in self.targets:
             self.stepper.move_stage_to_target(target)        
             cur_pos = self.stepper.get_curr_pos()
-            scan_pos.append(cur_pos)
+            print(f"Position: {cur_pos['1']:.3f}")
         return scan_pos
 
     def execute_continuous_scan(self):
