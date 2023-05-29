@@ -29,11 +29,14 @@ In the most general case, one would like to exploit all of the three features of
 .. code-block:: python
     :lineno-start: 1
 
-    from pizurscan.InputValidator import input_validator
-    from pizurscan.InputProcessor import evaluate_daq_pars
-    from pizurscan.Scanner import Scanner 
-    from pizurscan.OutputProcessor import save_processed_data
+    from InputValidator import input_validator
+    from Scanner import Scanner
+    from InputProcessor import evaluate_daq_pars
+    from OutputProcessor import save_processed_data
+    import json 
+    import sys
     import keyboard
+    from colorama import Fore, Back, Style, init
 
 The ``keyboard`` is optional and is used for pausing the program while writing the parameters in the DAQ pars.  
 The `json <https://docs.python.org/3/library/json.html>`_ file "*input_dicts.json*" comprises two dictionaries; **scan_pars** and **pi**, which define respectively the parameters of the scan, such as the edges or the cinematic, and the parameters associated with PI instrument. 
@@ -92,11 +95,13 @@ Note that *scan_pars* can be easily selected because it is the value of the key 
 
 .. code-block:: python
    :lineno-start: 1
-   
+
+    # process scan_pars to find the daq_pars
     daq_pars = evaluate_daq_pars(scan_pars)
-    print("Data Acquisition parameters:")
+    print(Fore.GREEN +  "Here're the parameters that you should insert into the DAQ panel of the Zurich:")
     for k, v in daq_pars.items():
-        print(k+": ", v)
+        print(Back.WHITE + Fore.BLUE+k+": ", v)
+    print(Style.RESET_ALL)
 
 At that point, one may want to insert these parameters in the DAQ of the lock-in, which could take some time. A valid solution is to define a function for producing a pausing I/O interface: 
 
@@ -109,16 +114,18 @@ At that point, one may want to insert these parameters in the DAQ of the lock-in
         Pauses the program execution until the user presses any key.
         If the ESC key is pressed, the program terminates.
         """
-        print("Program is pausing: when you're done working on the Zurich lock-in, press any key to continue, or ESC to exit.")
+        print(Back.RED +"Program is pausing: when you're done working on the Zurich lock-in, press any key to continue, or ESC to exit.")
         print("Waiting for user input...")
         while True:
             pressed_key = keyboard.read_event()
             try:
                 if pressed_key.name == 'esc':
                     print("\nYou pressed ESC, so exiting...")
+                    print(Style.RESET_ALL)
                     sys.exit(0)
                 else:
                     print("Continuing program...")
+                    print(Style.RESET_ALL)
                     break
             except:
                 break
@@ -129,8 +136,16 @@ Now everything is ready for performing the desired scan. Let's suppose that one 
 .. code-block:: python
    :lineno-start: 1
 
+    # instantiate the Scanner object
     with Scanner(inpars) as scanner:
-        scanner.execute_continuous_scan()
+        try: 
+            if scan_pars["type"] == "continuous":
+                scanner.execute_continuous_scan()
+            else:
+                scanner.execute_discrete_scan()
+        except KeyboardInterrupt:
+            scanner.stepper.close_connection()
+            print("Scan execution interrupted: closing program ...")
 
 | If instead a discrete has to be executed the method *execute_continuous_scan* must be replaced with *execute_discrete_scan*. Easy, no?
 

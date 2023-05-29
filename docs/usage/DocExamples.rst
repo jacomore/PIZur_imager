@@ -20,14 +20,14 @@ Example 1: Scan execution
    :lineno-start: 1
 
     from Scanner import Scanner
-    from pizurscan.InputValidator import input_validator
-    
+    from InputValidator import input_validator
+
     # extract and validate input data
     inpars = input_validator()
-
+    scan_pars = inpars["scan_pars"]
     # instantiate the Scanner object
     with Scanner(inpars) as scanner:
-        try: 
+        try:
             if scan_pars["type"] == "continuous":
                 scanner.execute_continuous_scan()
             else:
@@ -61,8 +61,8 @@ are still necessary for the InputProcessor class.
 
     # process data that are outputted by Zurich-lock in and saved into the output folder
     save_processed_data(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
-                         scan_pars = scan_pars,
-                         daq_pars = daq_pars)
+                        scan_pars = inpars["scan_pars"],
+                        daq_pars = daq_pars)
 
 
 Example 3: Scan execution and data processing
@@ -74,39 +74,46 @@ Example 3: Scan execution and data processing
 .. code-block:: python
    :lineno-start: 1
 
-    from InputValidator import InputValidator
+    from InputValidator import input_validator
     from Scanner import Scanner
     from InputProcessor import evaluate_daq_pars
     from OutputProcessor import save_processed_data
     import json 
     import sys
+    import keyboard
+    from colorama import Fore, Back, Style, init
 
     def press_any_key_to_continue():
         """
         Pauses the program execution until the user presses any key.
         If the ESC key is pressed, the program terminates.
         """
-        print("Program is pausing: when you're done working on the Zurich lock-in, press any key to continue, or ESC to exit.")
+        print(Back.RED +"Program is pausing: when you're done working on the Zurich lock-in, press any key to continue, or ESC to exit.")
         print("Waiting for user input...")
         while True:
             pressed_key = keyboard.read_event()
             try:
                 if pressed_key.name == 'esc':
                     print("\nYou pressed ESC, so exiting...")
+                    print(Style.RESET_ALL)
                     sys.exit(0)
                 else:
                     print("Continuing program...")
+                    print(Style.RESET_ALL)
                     break
             except:
                 break
 
+    init()
     # extract and validate input data
     inpars = input_validator()
-
+    scan_pars = inpars["scan_pars"]
     # process scan_pars to find the daq_pars
-    daq_pars = evaluate_daq_pars(inpars["scan_pars"])
+    daq_pars = evaluate_daq_pars(scan_pars)
+    print(Fore.GREEN +  "Here're the parameters that you should insert into the DAQ panel of the Zurich:")
     for k, v in daq_pars.items():
-    print(k+": ", v)
+        print(Back.WHITE + Fore.BLUE+k+": ", v)
+    print(Style.RESET_ALL)
 
     press_any_key_to_continue()
 
@@ -125,7 +132,7 @@ Example 3: Scan execution and data processing
 
     # process data that are outputted by Zurich-lock in and saved into the output folder
     save_processed_data(filename = "dev4910_demods_0_sample_r_avg_00000.csv",
-                         scan_pars = scan_pars,
-                         daq_pars = daq_pars)
-                         
+                            scan_pars = scan_pars,
+                            daq_pars = daq_pars)
+                            
     print("Scan data are saved to 'output/cleaned_1D_data.txt'. Closing the program ...")
