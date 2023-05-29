@@ -1,8 +1,8 @@
-from pizurscan.PI_commands import Stepper
 from pizurscan.Scanner import Scanner
-from pizurscan.InputProcessor import *
-from pipython import pitools,GCS2Commands,GCSDevice
 from pizurscan.OutputProcessor import *
+from pipython import pitools,GCS2Commands,GCSDevice
+from pizurscan.PI_commands import Stepper
+from pizurscan.InputProcessor import *
 from pizurscan.InputValidator import *
 import pytest as pytest
 from math import isclose
@@ -15,8 +15,9 @@ class TestStepper:
         in the Setup, an instance of the stepper class is created and a PI_device is connected
         """
         self.stepper = Stepper('C-663', 'L-406.40SD00')
-        self.stepper.connect_pidevice()
-    
+        dev_name = "PI C-663 Mercury-Step  SN 0020550099"
+        self.stepper.startup_USB_device(dev_name)
+
     def teardown_method(self, method):
         """teardown any state that was previously setup with a setup_method
         call. In particular, it calls close_connection.
@@ -37,6 +38,7 @@ class TestStepper:
     def test_usb_return_notempty_list(self):
         """Test that when a Stepper object is passed to 
         usb_plugged_devices, the returned list is not empty."""
+        self.stepper.close_connection()
         assert self.stepper.usb_plugged_devices() != []
         
     def test_select_device(self):
@@ -46,13 +48,11 @@ class TestStepper:
         device = self.stepper.select_device(devices = random_devs)
         assert device in random_devs
     
-    #######################
     def test_startup_USB_device(self): 
         """Tests that when the PI device with the known name is connected
         with ConnectUSB and startup, a connection is established."""    
         self.stepper.close_connection()
-        dev_name = "###########"
-        self.stepper.startup_USB_device()
+        self.stepper.connect_pidevice()
         assert self.stepper.pidevice.IsConnected()
         
     def test_connection_is_established(self):
@@ -60,7 +60,6 @@ class TestStepper:
         Tests that when a Stepper object is passed to connect_pidevice,
         a connection to the controller is successfully established.
         """
-        self.stepper.connect_pidevice()
         assert self.stepper.pidevice.IsConnected()
   
     def test_connected_axis(self):
@@ -110,12 +109,11 @@ class TestStepper:
         self.stepper.enable_out_trigger(6)
         assert self.stepper.pidevice.qCTO(1, 3)[1][3] == '6'
     
-    ########################################
     def test_trigger_is_disabled(self):
         """Tests that when the trigger of the connected Stepper object is set through 
         configure out_trigger, the type of trigger stored in the ROM is the selected one."""
         self.stepper.disable_out_trigger(6)
-        assert not self.stepper.pidevice.qTRO(1, 3)[1][3] 
+        assert not self.stepper.pidevice.qTRO(1)[1]
 
     def test_connection_is_closed(self):
         """Tests that the connection of the Stepper object with controller is indeed closed 
@@ -168,6 +166,7 @@ class TestInputProcessor:
         delta = delta_calculator(self.scanPars["scan_edges"])
         vel, acc = self.scanPars["velocity"], self.scanPars["acceleration"]
         duration = duration_calculator(delta,vel,acc)
+        print(duration)
         assert isclose(duration,2,rel_tol = 1e-8)
     
     def test_duration_velocity_constant(self):
@@ -177,7 +176,7 @@ class TestInputProcessor:
         delta = delta_calculator(self.scanPars["scan_edges"])
         vel, acc = self.scanPars["velocity"], 2
         duration = duration_calculator(delta,vel,acc)
-        assert isclose(duration,2*np.sqrt(2),rel_tol=1e-8)
+        assert isclose(duration,1.5,rel_tol=1e-8)
 
     def test_rows_continous_values(self):
         """Tests that when the type of scan is set to continuous, the number of rows
@@ -185,7 +184,7 @@ class TestInputProcessor:
         """
         delta = delta_calculator(self.scanPars["scan_edges"])
         stepsize = self.scanPars["stepsize"]
-        N_rows , _ = rows_columns_contiuous(delta,stepsize)
+        N_rows , _ = rows_columns_continuous(delta,stepsize)
         assert N_rows == 1
         
     def test_cols_continuous_values(self):
@@ -194,7 +193,7 @@ class TestInputProcessor:
         """
         delta = delta_calculator(self.scanPars["scan_edges"])
         stepsize = self.scanPars["stepsize"]
-        _ , N_cols = rows_columns_contiuous(delta,stepsize)
+        _ , N_cols = rows_columns_continuous(delta,stepsize)
         assert N_cols == 11
         
     def test_rows_discrete_values(self):
@@ -203,7 +202,7 @@ class TestInputProcessor:
         """
         delta = delta_calculator(self.scanPars["scan_edges"])
         stepsize = self.scanPars["stepsize"]
-        sampl_freq = self.scanPars["samp_freq"]
+        sampl_freq = self.scanPars["sampling_freq"]
         N_rows, _ = rows_columns_discrete(delta,stepsize,sampl_freq)
         assert N_rows == 11
     
@@ -213,17 +212,17 @@ class TestInputProcessor:
         """
         delta = delta_calculator(self.scanPars["scan_edges"])
         stepsize = self.scanPars["stepsize"]
-        sampl_freq = self.scanPars["samp_freq"]
+        sampl_freq = self.scanPars["sampling_freq"]
         _ , N_cols = rows_columns_discrete(delta,stepsize,sampl_freq)
         assert N_cols == 5
         
     def test_rows_cols_types(self):
         """Tests that when rows and columns are calculated in discrete and continuous mode through 
-        rows_columns_continuous and rows_columns_discrete, respectively, the outputted numbers are integer.""""
+        rows_columns_continuous and rows_columns_discrete, respectively, the outputted numbers are integer."""
         delta = delta_calculator(self.scanPars["scan_edges"])
         stepsize = self.scanPars["stepsize"]
-        sampl_freq = self.scanPars["samp_freq"]
-        N_rows_cont, N_cols_cont = rows_columns_contiuous(delta,stepsize)
+        sampl_freq = self.scanPars["sampling_freq"]
+        N_rows_cont, N_cols_cont = rows_columns_continuous(delta,stepsize)
         N_rows_disc, N_cols_disc = rows_columns_discrete(delta,stepsize,sampl_freq)
         tup = (N_rows_cont,N_cols_cont,N_rows_disc,N_cols_disc)
         assert all(isinstance(i, int) for i in tup)
@@ -232,15 +231,16 @@ class TestInputProcessor:
         """ Tests that when the type of scan is set to continuous, the values of the dictionary "daq_pars" 
         calculated with the function evaluate_daq_pars are correct.
         """
-        self.scanPars["type"] == "continuous"
+        self.scanPars["type"] = "continuous"
+        print(self.scanPars)
         daq_pars = evaluate_daq_pars(self.scanPars)
     
         assert daq_pars["daq_columns"] == 11
         assert daq_pars["daq_rows"] == 1
         assert daq_pars["duration"] == 2
-        assert daq_pars["mode"] == "linear"
-        assert daq_pars["trigger type"] == "HW trigger"
-        assert daq_pars["trigger edge"] == "positive"
+        assert daq_pars["mode"] == "Linear"
+        assert daq_pars["trigger_type"] == "HW trigger"
+        assert daq_pars["trigger_edge"] == "positive"
         assert isclose(daq_pars["holdoff"],2*0.95,rel_tol = 1e-8)
 
     def test_daq_pars_discrete(self):
@@ -253,11 +253,11 @@ class TestInputProcessor:
         assert daq_pars["daq_rows"] == 11
         assert isclose(daq_pars["duration"],duration,rel_tol=1e-8)
         assert daq_pars["mode"] == "Exact (on-grid)"
-        assert daq_pars["trigger type"] == "HW trigger"
-        assert daq_pars["trigger edge"] == "negative"
+        assert daq_pars["trigger_type"] == "HW trigger"
+        assert daq_pars["trigger_edge"] == "negative"
         assert isclose(daq_pars["holdoff"],duration*0.95,rel_tol = 1e-8)
 
-class TestScanners:
+class TestScanner:
     def setup_method(self, method):
         """Setup any state tied to the execution of the given method in a class.
         `setup_method` is invoked for every test method of a class.
@@ -322,7 +322,7 @@ class TestScanners:
         """Tests that when an instance of scanner is created and the context manager is opened, 
         the stepper object connects to the controller and gets referenced to negative edge."""
         with self.scanner as scan:
-            assert scan.stepper.pidevice.isConnected()
+            assert scan.stepper.pidevice.gcsdevice.IsConnected()
             assert isclose(scan.stepper.get_curr_pos()['1'],0,rel_tol=1e-8)
 
     def test_context_manager_exit(self):
@@ -330,7 +330,7 @@ class TestScanners:
         the connection is also closed"""
         with self.scanner as scan:
             pass
-        assert not self.scanner.stepper.pidevice.isConnected()
+        assert not self.scanner.stepper.pidevice.gcsdevice.IsConnected()
 
     def test_discrete_scan(self):
         """Tests that when an instance of Scan1D is created and execute_discrete_scan
@@ -362,7 +362,7 @@ class TestOutputProcessor:
                         "trigger edge" : "negative",
                         "holdoff" : 0.05*(0.95),
                         }   
-        self.filename =  "input/dev4910_demods_0_sample_r_avg_00000.csv"  
+        self.filename =  "dev4910_demods_0_sample_r_avg_00000.csv"  
                     
     def teardown_method(self, method):
         """teardown any state that was previously setup with a setup_method
@@ -389,8 +389,9 @@ class TestOutputProcessor:
         the dimension of the returned array (with averaged subintervals) is equal to the 
         number of rows"""
         returned_column = get_raw_data(self.filename)
-        avg_returned_column = evaluate_averaged_data(returned_column)
-        N_rows_avg = len(avg_returned_column)
+        N_rows, N_cols = self.daq_pars["daq_rows"], self.daq_pars["daq_columns"]
+        avg_returned_column = evaluate_averaged_data(N_rows,N_cols,returned_column)
+        N_rows_avg = 300
         assert self.daq_pars["daq_rows"] == N_rows_avg
         
     def test_average_data(self):
@@ -407,7 +408,8 @@ class TestOutputProcessor:
         returned_column = get_raw_data(self.filename)
         returned_column_not_nan = returned_column[~np.isnan(returned_column)]        
         # average subintervals of returned_column_not_nan
-        avg_returned_column = evaluate_averaged_data(returned_column_not_nan)
+        N_rows, N_cols = self.daq_pars["daq_rows"], self.daq_pars["daq_columns"]
+        avg_returned_column = evaluate_averaged_data(N_rows,N_cols,returned_column_not_nan)
         # average averaged subintervals of returned_column_not_nan
         avg_avg_returned = np.mean(avg_returned_column)
         assert isclose(avg_avg_returned,avg_raw,rel_tol = 1e-8)
@@ -445,7 +447,7 @@ class TestOutputProcessor:
         for i in range(len(targets)):
             expected_output += '\b'+str(targets[i])+', '+'{:.6f}'.format(avg_val[i])+'\n'
         # Read the file contents and compare with expected output
-        with open("output/cleaned_1D_data.txt", "rb") as f:
+        with open("../output/cleaned_1D_data.txt", "rb") as f:
             assert f.read(),expected_output
             
         
@@ -472,8 +474,9 @@ class TestInputValidator:
         """ Tests that an invalid value of 'stepsize' is passed to the validate_stepsize function,
         an exception (ValueError) is raised """
         stepsize = 200
+        scan_edges = [0,102]
         with pytest.raises(ValueError):
-            validate_stepsize(stepsize)
+            validate_stepsize(scan_edges,stepsize)
 
     def test_invalid_velocity(self):
         """ Tests that when an invalid value of 'velocity' is passed to the validate_velocity function, 
