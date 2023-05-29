@@ -15,10 +15,11 @@ def input_validator():
     Returns:
         dict: A dictionary containing the input parameters for the scanning process.
     """
-    scan_pars = extract_scan_pars()
+    inpars = extract_scan_pars()
+    scan_pars = inpars["scan_pars"]
     try:
         validate(scan_pars)
-        return scan_pars
+        return inpars
     except ValueError as e:
         print(e.args[0])
         print("Closing program ...")
@@ -33,8 +34,7 @@ def extract_scan_pars():
     """
     with open('../input/input_dicts.json') as openPars:
         inpars = json.load(openPars)
-    scan_pars = inpars["scan_pars"]
-    return scan_pars
+    return inpars
 
 def validate(scan_pars):
     """
