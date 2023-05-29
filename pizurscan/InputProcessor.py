@@ -1,6 +1,6 @@
 import numpy as np
 
-def rows_columns_contiuous(delta, stepsize):
+def rows_columns_continuous(delta, stepsize):
     """
     Calculate the number of rows and columns for a continuous scan with a PI controller and Zurich lock-in.
 
@@ -97,7 +97,7 @@ def evaluate_daq_pars(scan_pars):
 
     if scan_type == "continuous":
         duration = duration_calculator(delta, vel, acc)
-        N_rows, N_cols = rows_columns_contiuous(delta, stepsize)
+        N_rows, N_cols = rows_columns_continuous(delta, stepsize)
         mode = "Linear"
         edge = "positive"
     else:
