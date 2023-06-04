@@ -1,11 +1,15 @@
 {	"scan_pars" :
 		{			
 			"type": "discrete",
+			"sampling_freq" : 1.67e3,
 			"scan_edges": [10,100],
             "stepsize" :5,
 			"velocity" : 10,
 			"acceleration" : 20,
-			"sampling_freq" : 1.67e3
+			"servo_scan_edges": [10,20],
+			"servo_stepsize" : 2,
+			"servo_velocity": 10,
+			"servo_acceleration":10
 		},
 	"pi" : 
 		{	"ID":"C-663",
