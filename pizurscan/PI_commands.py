@@ -140,6 +140,17 @@ class Stepper:
             Float defining the acceleration of motion
         """
         self.pidevice.ACC('1',acceleration)
+    
+    def set_deceleration(self,deceleration):
+        """ 
+        Set the deceleration of motion in the ROM of the controller
+        
+        Parameters
+        ----------
+        deceleration : float
+            Float defining the deceleration of motion
+        """
+        self.pidevice.DEC('1',deceleration)
         
     def get_velocity(self):
         """ 
@@ -209,20 +220,48 @@ class Stepper:
         """
         self.pidevice.CloseConnection()    
         
-    def init_daisy_chain(self):
-        """ Initialize the master and servo objects for daisy chaining.
-        This method initializes the master and servo objects with the specified controller ID and axis ID.
+    
+        
+class StepperChain:
+    """Handles the connection with two pidevices, making use of the Stepper class
+    to control a USB daisy chain of two devices.
+
+    Attributes
+    ----------
+    controller_id : str
+        The ID of the controller.
+    axis_id : int
+        The ID of the axis.
+
+    Methods
+    -------
+    connect_daisy(dev_indices) 
+        Connects master and servo to form a daisy chain.
+    reference_both_stages(ref_modes)
+        References both stages.
+    configure_both_trig(trigger_types)
+        Configures the output trigger modes of the two devices.
+    """
+
+    def __init__(self, controller_id: str, axis_id: int):
+        """Initializes the StepperChain class.
+
+        Parameters:
+        controller_id (str): The ID of the controller.
+        axis_id (int): The ID of the axis.
         """
-        self.master = self.pidevice(self.controller_id,self.axis_id)
-        self.servo = self.pidevice(self.controller_id,self.axis_id)
+        self.controller_id = controller_id
+        self.axis_id = axis_id
+        self.master = Stepper(controller_id, axis_id)
+        self.servo = Stepper(controller_id, axis_id)
         
     
     def open_daisy_chain(self):
         """Opens the connection with the daisy chain.
         This method opens a daisy chain configuration using the first plugged device.
         """
-        devices = self.usb_plugged_devices()
-        self.master.OpenUSBDaisyChain(description=devices[0])
+        devices = self.master.usb_plugged_devices()
+        self.master.pidevice.OpenUSBDaisyChain(description=devices[0])
         
     def get_daisy_chain_id(self):
         """Get the ID of the daisy chain.
@@ -232,24 +271,34 @@ class Stepper:
         daisy_chain_id : int
             The ID of the daisy chain.
         """
-        daisy_chain_id = self.master.dcid
+        daisy_chain_id = self.master.pidevice.dcid
         return daisy_chain_id
-    
+
     def connect_daisy_chain(self):
         """Connects the master and servo in the daisy chain.
 
         This method initializes the daisy chain configuration, connects the master and servo devices,
         performs startup procedures, and sets up the axis for operation.
         """
-        self.init_daisy_chain()
         self.open_daisy_chain()
         dcid = self.get_daisy_chain_id()
-        self.master.ConnectDaisyChainDevice(1, dcid)
-        pitools.startup(self.master, self.axis_id)
-        self.servo.ConnectDaisyChainDevice(2, dcid)
+        self.master.pidevice.ConnectDaisyChainDevice(1, dcid)  # maybe '1'
+        pitools.startup(self.pidevice, self.axis_id)
+        self.servo.pidevice.ConnectDaisyChainDevice(2, dcid)  # maybe '2'
         pitools.startup(self.servo, self.axis_id)
         
     def close_daisy_chain_connection(self):
         """Close all connections on daisy chain and daisy chain connection itself.
         """
-        self.master.CloseDaisyChain()
+        self.master.pidevice.CloseDaisyChain()
+        
+        
+    def reference_both_stages(self, ref_modes) -> None:
+        """References both stages.
+
+        Parameters:
+        ref_modes (List[str]): List of two strings defining the referencing modes.
+        """
+        self.master.move_stage_to_ref(ref_modes[0])
+        self.servo.move_stage_to_ref(ref_modes[1])    
+
