@@ -86,3 +86,37 @@ def save_processed_data(filename, scan_pars, daq_pars):
         out_data = raw_data
     # save data
     save_data_file(targets, out_data)
+    
+def evaluate_2D_targets(scan_pars):
+    targets = evaluate_target_positions(scan_pars["stepsize"],scan_pars["scan_edges"])
+    servo_targets = evaluate_target_positions(scan_pars["servo_stepsize"],scan_pars["servo_scan_edges"])
+    if scan_pars["main_axis"] == "master":
+        return targets, servo_targets
+    else:
+        return servo_targets,targets
+
+def save_2D_data_file(primary,secondary,out_data,N_rows,N_cols):
+        """Return a tabular array with the values of the measured signal at each positions"""
+        out_name = "cleaned_2D_data.txt"
+        length_of_file = N_rows * N_cols
+        out_file = np.empty((length_of_file,3))
+        for row_idx,row in enumerate(secondary):
+            row_file = np.empty(N_cols)
+            row_file[:] = row
+            out_file[row_idx*N_cols:(row_idx+1)*N_cols] =  np.column_stack((primary,row_file,out_data[row_idx*N_cols:(row_idx+1)*N_cols]))          
+        np.savetxt(out_name, out_file, delimiter = ",")
+    
+def save_processed_2D_data(filename,scan_pars,daq_pars):
+    targets1, targets2 = evaluate_2D_targets(scan_pars)
+    raw_data = get_raw_data(filename)
+    if (scan_pars["type"]) == "discrete":
+        out_data = evaluate_averaged_data(raw_data)
+    else:
+        out_data = raw_data
+    save_2D_data_file(
+                        main_targets = targets1,
+                        secondary_targets =targets2,
+                        out_data = out_data,
+                        N_rows = daq_pars["out_rows"],
+                        N_cols = daq_pars["out_cols"]
+                    )
