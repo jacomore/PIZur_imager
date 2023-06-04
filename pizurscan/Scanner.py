@@ -182,9 +182,9 @@ class PlaneScan:
         self.targets = self.evaluate_target_positions(self.scan_edges,self.stepsize)
         
         # Servo parameters
-        self.servo_scan_edges = self.scan_pars["scan_edges"]
-        self.servo_stepsize = self.scan_pars["stepsize"]
-        self.servo_targets = self.evaluate_target_positions(self.srv_scan_edges,self.srv_stepsize)
+        self.servo_scan_edges = self.scan_pars["servo_scan_edges"]
+        self.servo_stepsize = self.scan_pars["servo_stepsize"]
+        self.servo_targets = self.evaluate_target_positions(self.servo_scan_edges,self.servo_stepsize)
         
         # instantiate the stepper chain
         self.chain = StepperChain(self.PI["ID"], self.PI["stage_ID"])
