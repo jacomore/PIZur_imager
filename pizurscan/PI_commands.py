@@ -208,3 +208,48 @@ class Stepper:
         Close the connection and reset the axis property
         """
         self.pidevice.CloseConnection()    
+        
+    def init_daisy_chain(self):
+        """ Initialize the master and servo objects for daisy chaining.
+        This method initializes the master and servo objects with the specified controller ID and axis ID.
+        """
+        self.master = self.pidevice(self.controller_id,self.axis_id)
+        self.servo = self.pidevice(self.controller_id,self.axis_id)
+        
+    
+    def open_daisy_chain(self):
+        """Opens the connection with the daisy chain.
+        This method opens a daisy chain configuration using the first plugged device.
+        """
+        devices = self.usb_plugged_devices()
+        self.master.OpenUSBDaisyChain(description=devices[0])
+        
+    def get_daisy_chain_id(self):
+        """Get the ID of the daisy chain.
+
+        Returns
+        -------
+        daisy_chain_id : int
+            The ID of the daisy chain.
+        """
+        daisy_chain_id = self.master.dcid
+        return daisy_chain_id
+    
+    def connect_daisy_chain(self):
+        """Connects the master and servo in the daisy chain.
+
+        This method initializes the daisy chain configuration, connects the master and servo devices,
+        performs startup procedures, and sets up the axis for operation.
+        """
+        self.init_daisy_chain()
+        self.open_daisy_chain()
+        dcid = self.get_daisy_chain_id()
+        self.master.ConnectDaisyChainDevice(1, dcid)
+        pitools.startup(self.master, self.axis_id)
+        self.servo.ConnectDaisyChainDevice(2, dcid)
+        pitools.startup(self.servo, self.axis_id)
+        
+    def close_daisy_chain_connection(self):
+        """Close all connections on daisy chain and daisy chain connection itself.
+        """
+        self.master.CloseDaisyChain()
