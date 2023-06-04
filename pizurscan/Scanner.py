@@ -168,25 +168,66 @@ class LineScan:
 
 class PlaneScan:
     """
-    Scan2D is designed to control two PI controller and the Zurich lock-in
-        with the aim of perfoming a two dimensional scan along the desired axis (x or y). 
+    A class for performing a 1D or 2D scan using a PI device.
+
+    Attributes:
+        PI (dict): Dictionary of PI device information.
+        scan_pars (dict): Dictionary of scan parameters.
+        scan_edges (list): List containing the two edges of the scan. Axis will move from the leftward to the rightward.
+        stepsize (float): Step size of the scan.
+        targets (numpy.ndarray): Array of target positions for the scan.
+        stepper (Stepper): Stepper object for controlling the PI device.
+
+    Methods:
+        __init__(self, InPars):
+            Initializes ScanPlane object with input parameters.
+        __enter__(self):
+            Context manager enter method.
+        __exit__(self, exc_type, exc_value, traceback):
+            Context manager exit method.
+        _connect_stepperchain(self):
+            Connects to the PI device through a user-interface I/O.
+        _reference_stepperchain(self):
+            Moves stepper to the required reference position at the maximum velocity and acceleration.
+        evaluate_target_positions(self, scan_edges, stepsize):
+            Evaluates the partition of the target points for a 1D scan.
+        setup_motion_stepperchain(self):
+            Stores input velocity, acceleration, and trigger type in the ROM of the device.
+        init_scan_stepperchain(self):
+            Disables the trigger that was previously set and moves to the first target of the scan.
+        setup_motion_parameters(self):
+            Sets motion parameters such as velocity, acceleration, and deceleration.
+        enable_out_trigger_stepperchain(self):
+            Enables the output trigger for the stepper chain based on the scan type and main axis.
+        disable_out_trigger_stepperchain(self):
+            Disables the output trigger for the stepper chain.
+        execute_discrete_2D_scan(self):
+            Executes the 2D discrete scan by moving the axes to all the target positions.
+        execute_continuous_2D_scan(self):
+            Executes the 2D continuous scan by moving the axes to the last position.
     """
-    def __init__(self,InPars):
-         # input parameters as dictionary from json file
+    def __init__(self, InPars):
+        """
+        Initializes ScanPlane object with input parameters.
+
+        Parameters:
+        - InPars : dict
+            Input parameters as a dictionary from a JSON file.
+        """
         self.PI = InPars["pi"]
         self.scan_pars = InPars["scan_pars"]
 
         # Master parameters
         self.scan_edges = self.scan_pars["scan_edges"]
         self.stepsize = self.scan_pars["stepsize"]
-        self.targets = self.evaluate_target_positions(self.scan_edges,self.stepsize)
+        self.targets = self.evaluate_target_positions(self.scan_edges, self.stepsize)
         
         # Servo parameters
         self.servo_scan_edges = self.scan_pars["servo_scan_edges"]
         self.servo_stepsize = self.scan_pars["servo_stepsize"]
-        self.servo_targets = self.evaluate_target_positions(self.servo_scan_edges,self.servo_stepsize)
+        self.servo_targets = self.evaluate_target_positions(self.servo_scan_edges, self.servo_stepsize)
         
-        # instantiate the stepper chain
+        # Instantiate the stepper chain
         self.chain = StepperChain(self.PI["ID"], self.PI["stage_ID"])
         
     def __enter__(self):
@@ -197,7 +238,7 @@ class PlaneScan:
         
         Returns:
         -------
-            Scanner: Scanner object connected to the pidevice and referenced
+        Scanner: Scanner object connected to the pidevice and referenced.
         """
         self._connect_stepperchain()  
         self._reference_stepperchain()
@@ -252,6 +293,9 @@ class PlaneScan:
         self.setup_motion_stepperchain()
         
     def setup_motion_parameters(self):  
+        """
+        Sets motion parameters such as velocity, acceleration, and deceleration.
+        """
         self.chain.master.set_velocity(self.scan_pars["velocity"])
         self.chain.servo.set_velocity(self.scan_pars["velocity_servo"]) # 10 mm/s is the standard velocity of the controller
         self.chain.master.set_acceleration(self.scan_pars["acceleration"])
@@ -259,16 +303,30 @@ class PlaneScan:
         self.chain.master.set_deceleration(self.scan_pars["deceleration"])
         self.chain.servo.set_deceleration(self.scan_pars["deceleration_servo"])
         
-    def evaluate_target_positions(self,scanedges,stepsize):
-        """ Evaluate the partition of the target points for a 1D scan   
+    def evaluate_target_positions(self, scanedges, stepsize):
+        """
+        Evaluate the partition of the target points for a 1D scan.
+
+        Parameters:
+        - scanedges : list
+            List containing the two edges of the scan.
+        - stepsize : float
+            Step size of the scan.
+
+        Returns:
+        -------
+        numpy.ndarray:
+            Array of target positions for the scan.
         """ 
         # calculate targets points
-        Npoints = int((scanedges[1]-scanedges[0])/stepsize) + 1
-        return np.linspace(scanedges[0],scanedges[1],Npoints,endpoint=  True)
+        Npoints = int((scanedges[1] - scanedges[0]) / stepsize) + 1
+        return np.linspace(scanedges[0], scanedges[1], Npoints, endpoint=True)
                    
     def enable_out_trigger_stepperchain(self):
-        """Depending on type of scan and the main axis, set the trigger output for the controllers."""
-        if self.scan_pars["type"] == "continous":
+        """
+        Depending on the type of scan and the main axis, set the trigger output for the controllers.
+        """
+        if self.scan_pars["type"] == "continuous":
             if self.scan_pars["main_axis"] == "master":
                 self.chain.master.enable_out_trigger(trigger_type=6)
             elif self.scan_pars["main_axis"] == "servo":
@@ -278,16 +336,21 @@ class PlaneScan:
             self.chain.servo.enable_out_trigger(trigger_type=6)
     
     def disable_out_trigger_stepperchain(self):
+        """
+        Disables the output trigger for the stepper chain.
+        """
         self.chain.master.disable_out_trigger(trigger_type=6)
         self.chain.servo.disable_out_trigger(trigger_type=6)
     
     def execute_discrete_2D_scan(self):
-        """execute the two 2D discrete scan"""
+        """
+        Executes the 2D discrete scan by moving the axes to all the target positions.
+        """
         self.init_scan_stepperchain()   
         if self.scan_pars["main_axis"] == "master":
-            for idx_row,row in enumerate(self.srv_targets):
+            for idx_row, row in enumerate(self.srv_targets):
                 self.chain.servo.move_stage_to_target(row)
-                if (idx_row%2 == 0):
+                if idx_row % 2 == 0:
                     for col in self.targets:
                         self.chain.master.move_stage_to_target(col)
                 else:
@@ -295,31 +358,32 @@ class PlaneScan:
                         self.chain.master.move_stage_to_target(col)                        
 
         elif self.scan_pars["main_axis"] == "servo":
-            for idx_col,col in enumerate(self.targets):
+            for idx_col, col in enumerate(self.targets):
                 self.chain.master.move_stage_to_target(col) 
-                if (idx_col%2 == 0):
+                if idx_col % 2 == 0:
                     for row in self.servo_targets:
                         self.chain.servo.move_stage_to_target(row)    
                 else:
                     for row in self.servo_targets[::-1]:
                         self.chain.servo.move_stage_to_target(row)                 
                 
-    def execute_continous_2D_scan(self):
-        """execute the 2D continous scan"""
+    def execute_continuous_2D_scan(self):
+        """
+        Executes the 2D continuous scan by moving the axes to the last position.
+        """
         self.init_scan_stepperchain()           
         if self.scan_pars["main_axis"] == "master":
-            for row_idx,row in enumerate(self.servo_targets):
+            for row_idx, row in enumerate(self.servo_targets):
                 self.chain.servo.move_stage_to_target(row)           
-                if row_idx%2 == 0:
+                if row_idx % 2 == 0:
                     self.chain.master.move_stage_to_target(self.targets[-1])
                 else:
                     self.chain.master.move_stage_to_target(self.targets[0])
 
         elif self.scan_pars["main_axis"] == "servo":
-            for col_idx,col in enumerate(self.targets):
+            for col_idx, col in enumerate(self.targets):
                 self.chain.master.move_stage_to_target(col)               
-                if col_idx%2 == 0:
+                if col_idx % 2 == 0:
                     self.chain.servo.move_stage_to_target(self.servo_targets[-1])
                 else:
                     self.chain.servo.move_stage_to_target(self.servo_targets[0])
-

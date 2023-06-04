@@ -157,10 +157,60 @@ def duration_calculator(delta, vel, acc):
         duration = 2 * np.sqrt(delta / acc)
     return duration
 
-def evalòuate_2D_daq_pars(scan_pars):
-    """Process input data for 2D scan in order to find the number of 
-        rows, columns and the duration of the triggered data acquisition of the zurich lock-in"""
-        
+def evaluate_2D_daq_pars(scan_pars):
+    """Process input data for a 2D scan to determine the number of rows, columns, and duration 
+    of the triggered data acquisition for the Zurich lock-in.
+
+    Parameters:
+    -----------
+    scan_pars : dict
+        A dictionary containing scan parameters, including:
+            - scan_edges : list[float]
+                The edges of the scan range for the main axis.
+            - stepsize : float
+                The step size for motion of the main axis stepper.
+            - acceleration : float
+                The acceleration of the main axis stepper.
+            - velocity : float
+                The velocity of the main axis stepper.
+            - servo_scan_edges : list[float]
+                The edges of the scan range for the servo axis.
+            - servo_stepsize : float
+                The step size for motion of the servo axis stepper.
+            - servo_acceleration : float
+                The acceleration of the servo axis stepper.
+            - servo_velocity : float
+                The velocity of the servo axis stepper.
+            - sampling_freq : float
+                The sampling frequency of the Zurich lock-in.
+            - type : str
+                The type of scan: 'continuous' or 'discrete'.
+            - main_axis : str
+                The main axis for the scan: 'master' or 'servo'.
+
+    Returns:
+    --------
+    daq_pars : dict
+        A dictionary containing data acquisition parameters, including:
+            - daq_columns : int
+                The number of columns for the data acquisition.
+            - daq_rows : int
+                The number of rows for the data acquisition.
+            - duration : float
+                The duration of the triggered data acquisition.
+            - mode : str
+                The data acquisition mode: 'Linear' for continuous scan, 'Exact (on-grid)' for discrete scan.
+            - trigger_type : str
+                The trigger type, always set to 'HW trigger'.
+            - trigger_edge : str
+                The trigger edge.
+            - holdoff : float
+                The holdoff time for the trigger.
+            - out_columns : int
+                The number of columns for the output data.
+            - out_rows : int
+                The number of rows for the output data.
+    """
     scan_edges = scan_pars["scan_edges"]
     stepsize = scan_pars["stepsize"]
     acc = scan_pars["acceleration"]
@@ -180,15 +230,10 @@ def evalòuate_2D_daq_pars(scan_pars):
             duration = duration_calculator(delta,vel,acc)
             _ , N_cols = rows_columns_continuous(delta,stepsize)
             N_rows, _ = rows_columns_discrete(servo_delta,servo_stepsize)
-            mode = "linear"
-            edge = "positive"
-        
         else:
             duration = duration_calculator(servo_delta,servo_vel,servo_acc)
             _ , N_cols = rows_columns_continuous(servo_delta,servo_stepsize)
             N_rows, _ = rows_columns_discrete(delta,stepsize)
-            mode = "linear"
-            edge = "positive"
         
         daq_pars =  {
                     "daq_columns" : N_cols,
