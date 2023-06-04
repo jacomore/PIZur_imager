@@ -51,6 +51,10 @@ def validate(scan_pars):
     validate_stepsize(scan_pars["scan_edges"], scan_pars["stepsize"])
     validate_velocity(scan_pars["velocity"])
     validate_acceleration(scan_pars["acceleration"])
+    validate_scan_edges(scan_pars["servo_scan_edges"])
+    validate_stepsize(scan_pars["servo_scan_edges"], scan_pars["servo_stepsize"])
+    validate_velocity(scan_pars["servo_velocity"])
+    validate_acceleration(scan_pars["servo_acceleration"])
     
 def validate_type(type):
     """
