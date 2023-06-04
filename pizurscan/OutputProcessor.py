@@ -88,6 +88,16 @@ def save_processed_data(filename, scan_pars, daq_pars):
     save_data_file(targets, out_data)
     
 def evaluate_2D_targets(scan_pars):
+    """
+    Evaluate the target positions for a 2D scan.
+
+    Args:
+    - scan_pars (dict): A dictionary containing scan parameters.
+
+    Returns:
+    - targets (ndarray): A NumPy array containing the target positions for the primary axis.
+    - servo_targets (ndarray): A NumPy array containing the target positions for the secondary axis.
+    """
     targets = evaluate_target_positions(scan_pars["stepsize"],scan_pars["scan_edges"])
     servo_targets = evaluate_target_positions(scan_pars["servo_stepsize"],scan_pars["servo_scan_edges"])
     if scan_pars["main_axis"] == "master":
@@ -95,28 +105,45 @@ def evaluate_2D_targets(scan_pars):
     else:
         return servo_targets,targets
 
-def save_2D_data_file(primary,secondary,out_data,N_rows,N_cols):
-        """Return a tabular array with the values of the measured signal at each positions"""
-        out_name = "cleaned_2D_data.txt"
-        length_of_file = N_rows * N_cols
-        out_file = np.empty((length_of_file,3))
-        for row_idx,row in enumerate(secondary):
-            row_file = np.empty(N_cols)
-            row_file[:] = row
-            out_file[row_idx*N_cols:(row_idx+1)*N_cols] =  np.column_stack((primary,row_file,out_data[row_idx*N_cols:(row_idx+1)*N_cols]))          
-        np.savetxt(out_name, out_file, delimiter = ",")
-    
-def save_processed_2D_data(filename,scan_pars,daq_pars):
+def save_2D_data_file(primary, secondary, out_data, N_rows, N_cols):
+    """
+    Save the cleaned 2D data to a file named "cleaned_2D_data.txt" in the current directory.
+
+    Args:
+    - primary (ndarray): A NumPy array containing the target positions for the primary axis.
+    - secondary (ndarray): A NumPy array containing the target positions for the secondary axis.
+    - out_data (ndarray): A NumPy array containing the cleaned data.
+    - N_rows (int): The number of rows in the cleaned data.
+    - N_cols (int): The number of columns in the cleaned data.
+    """
+    out_name = "cleaned_2D_data.txt"
+    length_of_file = N_rows * N_cols
+    out_file = np.empty((length_of_file,3))
+    for row_idx,row in enumerate(secondary):
+        row_file = np.empty(N_cols)
+        row_file[:] = row
+        out_file[row_idx*N_cols:(row_idx+1)*N_cols] =  np.column_stack((primary,row_file,out_data[row_idx*N_cols:(row_idx+1)*N_cols]))          
+    np.savetxt(out_name, out_file, delimiter=",")
+
+def save_processed_2D_data(filename, scan_pars, daq_pars):
+    """
+    Process the 2D data and save it to a file named "cleaned_2D_data.txt" in the current directory.
+
+    Args:
+    - filename (str): The name of the input file.
+    - scan_pars (dict): A dictionary containing scan parameters.
+    - daq_pars (dict): A dictionary containing data acquisition parameters.
+    """
     targets1, targets2 = evaluate_2D_targets(scan_pars)
     raw_data = get_raw_data(filename)
-    if (scan_pars["type"]) == "discrete":
+    if scan_pars["type"] == "discrete":
         out_data = evaluate_averaged_data(raw_data)
     else:
         out_data = raw_data
     save_2D_data_file(
-                        main_targets = targets1,
-                        secondary_targets =targets2,
-                        out_data = out_data,
-                        N_rows = daq_pars["out_rows"],
-                        N_cols = daq_pars["out_cols"]
-                    )
+        primary=targets1,
+        secondary=targets2,
+        out_data=out_data,
+        N_rows=daq_pars["out_rows"],
+        N_cols=daq_pars["out_cols"]
+    )
