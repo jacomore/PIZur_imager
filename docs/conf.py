@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'pizurscan'
 copyright = '2023, Giacomo Rizzi'
 author = 'Giacomo Rizzi'
-release = '0.1.6'
+release = '0.1.9'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
