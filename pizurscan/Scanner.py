@@ -109,8 +109,8 @@ class LineScan:
         and acceleration. 
         """
         # Set high default values to obtain quick referencing
-        max_vel = 10    # mm/s
-        max_acc = 20    # mm/s^2
+        max_vel = 20    # mm/s
+        max_acc = 200    # mm/s^2
         self.stepper.set_velocity(max_vel)
         self.stepper.set_acceleration(max_acc)
         self.stepper.move_stage_to_ref(self.PI["refmode"])
@@ -271,7 +271,7 @@ class PlaneScan:
         and acceleration. 
         """
         # Set high default values to obtain quick referencing
-        max_vel = 10    # mm/s
+        max_vel = 20    # mm/s
         self.chain.master.set_velocity(max_vel)
         self.chain.servo.set_velocity(max_vel)
         self.chain.reference_both_stages([self.PI["refmode"],self.PI["servo_refmode"]])
@@ -297,11 +297,11 @@ class PlaneScan:
         Sets motion parameters such as velocity, acceleration, and deceleration.
         """
         self.chain.master.set_velocity(self.scan_pars["velocity"])
-        self.chain.servo.set_velocity(self.scan_pars["velocity_servo"]) # 10 mm/s is the standard velocity of the controller
+        self.chain.servo.set_velocity(self.scan_pars["servo_velocity"]) # 10 mm/s is the standard velocity of the controller
         self.chain.master.set_acceleration(self.scan_pars["acceleration"])
-        self.chain.servo.set_acceleration(self.scan_pars["acceleration_servo"])
-        self.chain.master.set_deceleration(self.scan_pars["deceleration"])
-        self.chain.servo.set_deceleration(self.scan_pars["deceleration_servo"])
+        self.chain.servo.set_acceleration(self.scan_pars["servo_acceleration"])
+        self.chain.master.set_deceleration(self.scan_pars["acceleration"])
+        self.chain.servo.set_deceleration(self.scan_pars["servo_acceleration"])
         
     def evaluate_target_positions(self, scanedges, stepsize):
         """
@@ -348,7 +348,7 @@ class PlaneScan:
         """
         self.init_scan_stepperchain()   
         if self.scan_pars["main_axis"] == "master":
-            for idx_row, row in enumerate(self.srv_targets):
+            for idx_row, row in enumerate(self.servo_targets):
                 self.chain.servo.move_stage_to_target(row)
                 if idx_row % 2 == 0:
                     for col in self.targets:

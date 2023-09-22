@@ -1,12 +1,12 @@
 import json
 import sys
 
-MAX_SPEED = 10  # mm/s
+MAX_SPEED = 21  # mm/s
 MIN_POS = 0     # mm
 MAX_POS = 102   # mm
 MIN_STEP = 5e-4 # mm
 MAX_STEP = 102  # mm
-MAX_ACC = 20    # mm/s^2
+MAX_ACC = 201    # mm/s^2
 
 def input_validator():
     """

@@ -283,9 +283,9 @@ class StepperChain:
         self.open_daisy_chain()
         dcid = self.get_daisy_chain_id()
         self.master.pidevice.ConnectDaisyChainDevice(1, dcid)  # maybe '1'
-        pitools.startup(self.pidevice, self.axis_id)
+        pitools.startup(self.master.pidevice, self.axis_id)
         self.servo.pidevice.ConnectDaisyChainDevice(2, dcid)  # maybe '2'
-        pitools.startup(self.servo, self.axis_id)
+        pitools.startup(self.servo.pidevice, self.axis_id)
         
     def close_daisy_chain_connection(self):
         """Close all connections on daisy chain and daisy chain connection itself.
