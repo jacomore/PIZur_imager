@@ -272,8 +272,11 @@ class PlaneScan:
         """
         # Set high default values to obtain quick referencing
         max_vel = 20    # mm/s
+        max_acc = 200 # mm/s^2
         self.chain.master.set_velocity(max_vel)
+        self.chain.master.set_acceleration(max_acc)
         self.chain.servo.set_velocity(max_vel)
+        self.chain.servo.set_acceleration(max_acc)
         self.chain.reference_both_stages([self.PI["refmode"],self.PI["servo_refmode"]])
         
     def setup_motion_stepperchain(self):

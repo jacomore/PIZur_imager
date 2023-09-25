@@ -54,7 +54,7 @@ def save_data_file(targets, avg_data):
     - targets (ndarray): A NumPy array containing the target positions.
     - avg_data (ndarray): A NumPy array containing the averaged data.
     """
-    out_name = "../output/cleaned_1D_data.txt"
+    out_name = "../output/cleaned_data.txt"
     out_file = np.column_stack((targets, avg_data))
     np.savetxt(out_name, out_file, fmt="%10.6f", delimiter=",")
 
@@ -98,8 +98,8 @@ def evaluate_2D_targets(scan_pars):
     - targets (ndarray): A NumPy array containing the target positions for the primary axis.
     - servo_targets (ndarray): A NumPy array containing the target positions for the secondary axis.
     """
-    targets = evaluate_target_positions(scan_pars["stepsize"],scan_pars["scan_edges"])
-    servo_targets = evaluate_target_positions(scan_pars["servo_stepsize"],scan_pars["servo_scan_edges"])
+    targets = evaluate_target_positions(scan_pars["scan_edges"],scan_pars["stepsize"])
+    servo_targets = evaluate_target_positions(scan_pars["servo_scan_edges"],scan_pars["servo_stepsize"])
     if scan_pars["main_axis"] == "master":
         return targets, servo_targets
     else:
@@ -116,7 +116,7 @@ def save_2D_data_file(primary, secondary, out_data, N_rows, N_cols):
     - N_rows (int): The number of rows in the cleaned data.
     - N_cols (int): The number of columns in the cleaned data.
     """
-    out_name = "cleaned_2D_data.txt"
+    out_name = "..//output//cleaned_2D_data.txt"
     length_of_file = N_rows * N_cols
     out_file = np.empty((length_of_file,3))
     for row_idx,row in enumerate(secondary):
@@ -135,7 +135,8 @@ def save_processed_2D_data(filename, scan_pars, daq_pars):
     - daq_pars (dict): A dictionary containing data acquisition parameters.
     """
     targets1, targets2 = evaluate_2D_targets(scan_pars)
-    raw_data = get_raw_data(filename)
+    ff = "..//output//"+str(filename)
+    raw_data = get_raw_data(ff)
     if scan_pars["type"] == "discrete":
         out_data = evaluate_averaged_data(raw_data)
     else:
@@ -145,5 +146,5 @@ def save_processed_2D_data(filename, scan_pars, daq_pars):
         secondary=targets2,
         out_data=out_data,
         N_rows=daq_pars["out_rows"],
-        N_cols=daq_pars["out_cols"]
+        N_cols=daq_pars["out_columns"]
     )

@@ -1,15 +1,16 @@
 {	"scan_pars" :
 		{			
-			"type": "discrete",
+			"type": "continuous",
 			"main_axis": "master",
 			"sampling_freq" : 1.67e3,
-			"scan_edges": [10,100],
-            "stepsize" :5,
-			"velocity" : 10,
+			"scan_edges": [69.7,69.9],
+            "stepsize" :0.001,
+			"velocity" : 1,
 			"acceleration" : 200,
-			"servo_scan_edges": [10,15],
-			"servo_stepsize" : 2,
-			"servo_velocity": 10,
+			"servo_scan_edges": [20,20.2],
+			"servo_stepsize" : 0.001,
+			"servo_velocity": 1
+			,
 			"servo_acceleration":200
 		},
 	"pi" : 

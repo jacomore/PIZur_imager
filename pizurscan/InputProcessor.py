@@ -100,7 +100,7 @@ def evaluate_daq_pars(scan_pars):
         N_rows, N_cols = rows_columns_continuous(delta, stepsize)
         mode = "Linear"
         edge = "positive"
-    else:
+    elif scan_pars["type"] == "discrete":
         duration = 0.05  # 50 milliseconds
         N_rows, N_cols = rows_columns_discrete(delta, stepsize, sampl_freq)
         mode = "Exact (on-grid)"
@@ -224,17 +224,17 @@ def evaluate_2D_daq_pars(scan_pars):
     servo_delta = delta_calculator(servo_scan_edges)
     
     sampl_freq = scan_pars["sampling_freq"]
-    
-    if scan_pars["type"] == "continous":
+
+    if scan_pars["type"] == "continuous":
         if scan_pars["main_axis"] == "master":
             duration = duration_calculator(delta,vel,acc)
             _ , N_cols = rows_columns_continuous(delta,stepsize)
-            N_rows, _ = rows_columns_discrete(servo_delta,servo_stepsize)
+            N_rows, _ = rows_columns_discrete(servo_delta,servo_stepsize,sampl_freq)
         else:
             duration = duration_calculator(servo_delta,servo_vel,servo_acc)
             _ , N_cols = rows_columns_continuous(servo_delta,servo_stepsize)
-            N_rows, _ = rows_columns_discrete(delta,stepsize)
-        
+            N_rows, _ = rows_columns_discrete(delta,stepsize,sampl_freq)
+
         daq_pars =  {
                     "daq_columns" : N_cols,
                     "daq_rows" : N_rows,
@@ -247,13 +247,13 @@ def evaluate_2D_daq_pars(scan_pars):
                     "out_rows" : N_rows,
                     }
 
-    else:
+    elif scan_pars["type"] == "discrete":
         if scan_pars["main_axis"] == "master":
-            out_rows, _ = rows_columns_discrete(servo_delta,servo_stepsize)
-            _, out_cols = rows_columns_discrete(delta,stepsize)
+            out_rows, _ = rows_columns_discrete(servo_delta,servo_stepsize, sampl_freq)
+            _, out_cols = rows_columns_discrete(delta,stepsize, sampl_freq)
         else:
-            out_rows, _ = rows_columns_discrete(delta,stepsize)
-            _, out_cols = rows_columns_discrete(servo_delta,servo_stepsize)                        
+            out_rows, _ = rows_columns_discrete(delta,stepsize,sampl_freq)
+            _, out_cols = rows_columns_discrete(servo_delta,servo_stepsize,sampl_freq)                        
         N_rows = out_rows * out_cols
         duration = 0.05
         N_cols = int(np.floor(duration* sampl_freq))
