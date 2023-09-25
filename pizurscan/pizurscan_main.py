@@ -40,7 +40,7 @@ for k, v in daq_pars.items():
 print(Style.RESET_ALL)
 
 press_enter_to_continue()
-"""
+
 # instantiate the Scanner object
 with PlaneScan(inpars) as scanner:
     try:
@@ -51,7 +51,7 @@ with PlaneScan(inpars) as scanner:
     except KeyboardInterrupt:
         StepperChain.close_daisy_chain_connection()
         print("Scan execution interrupted: closing program ...")
-"""
+
 press_enter_to_continue()
 
 # process data that are outputted by Zurich-lock in and saved into the output folder
